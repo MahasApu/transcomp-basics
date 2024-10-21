@@ -4,12 +4,12 @@ import static syspro.lexer.Pattern.UnicodeSymbols.*;
 
 public class Pattern {
     enum UnicodeSymbols {
-        NUMBER("\\p{Nd}"),
+        NUMBER_LITERAL("\\p{Nd}"),
         PUNCTUATION("\\p{Pc}"),
         NON_SPACING_MARK("\\p{Mn}"),
         SPACING_MARK("\\p{Mc}"),
         FORMAT("\\p{Cf}"),
-        LETTER("[\\p{L}\\p{Nl}]"),
+        LETTER_CHARACTER("[\\p{L}\\p{Nl}]"),
         UNICODE_SCORE("_");
 
         public final String text;
@@ -27,8 +27,8 @@ public class Pattern {
 
         @Override
         String getRegex() {
-            String idContinue = String.format("[%s]|[%s%s%s%s]", LETTER, NUMBER, NON_SPACING_MARK, SPACING_MARK, FORMAT);
-            String idStart = String.format("[%s]|%s", LETTER, UNICODE_SCORE);
+            String idContinue = String.format("[%s]|[%s%s%s%s]", LETTER_CHARACTER, NUMBER_LITERAL, NON_SPACING_MARK, SPACING_MARK, FORMAT);
+            String idStart = String.format("[%s]|%s", LETTER_CHARACTER, UNICODE_SCORE);
             return idStart + idContinue + "*";
         }
     }

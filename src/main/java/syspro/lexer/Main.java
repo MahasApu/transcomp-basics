@@ -1,4 +1,5 @@
 package syspro.lexer;
+import syspro.tm.Tasks;
 
 public class Main {
 
@@ -6,7 +7,8 @@ public class Main {
 
         for (String inputLine : args) {
             Lexer lexer = new Lexer(inputLine);
-//            Tasks.Lexer.registerSolution(lexer);
+            Tasks.Lexer.registerSolution(lexer);
+//            lexer.tokenize();
         }
     }
 }

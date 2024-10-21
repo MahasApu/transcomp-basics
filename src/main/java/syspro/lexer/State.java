@@ -5,12 +5,14 @@ import java.util.ArrayDeque;
 class State {
 
     enum ObservedState {
-        BOOLEAN,
+        DEFAULT,
         KEYWORD,
+        SYMBOL,
         IDENTIFIER,
-        NUMBER_LETTER,
+        BOOLEAN,
+        NUMBER,
+        STRING,
         RUNE,
-        STRING_LETTER,
         INDENTATION;
     }
 
