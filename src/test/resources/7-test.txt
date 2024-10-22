@@ -1,0 +1,5 @@
+class Indent6
+  def memberIsAt2(): Boolean
+    return true
+    # The spaces in the following line are ignored for identation purposes,
+    # as per EOF rule

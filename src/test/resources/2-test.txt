@@ -1,0 +1,3 @@
+class Indent1
+   def notMultipleOf2(): Boolean
+      return true

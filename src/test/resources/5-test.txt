@@ -1,0 +1,4 @@
+class Indent4
+  def memberIsAt2(): Boolean
+      # Comment introduced extra identation level in the method body
+    return true

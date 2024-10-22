@@ -1,0 +1,4 @@
+class Indent2
+    # Comment established 4 spaces as single identation level
+  def memberIsAt2(): Boolean
+    return true

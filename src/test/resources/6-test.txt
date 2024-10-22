@@ -1,0 +1,4 @@
+class Indent5
+  def memberIsAt2(): Boolean
+    return true
+      # Comment introduced identation level in the method body (EOF rule is not applicable here)

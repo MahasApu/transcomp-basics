@@ -5,6 +5,7 @@ import java.util.ArrayDeque;
 class State {
 
     enum ObservedState {
+        TRIVIA,
         DEFAULT,
         KEYWORD,
         SYMBOL,
@@ -13,7 +14,8 @@ class State {
         NUMBER,
         STRING,
         RUNE,
-        INDENTATION;
+        INDENTATION,
+        COMMENTARY;
     }
 
     private ArrayDeque<ObservedState> newState;

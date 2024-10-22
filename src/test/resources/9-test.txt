@@ -1,0 +1,3 @@
+
+  class Indent8
+    val x = 42

@@ -1,0 +1,1 @@
+class Indent9	val x = 42

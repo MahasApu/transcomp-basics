@@ -1,0 +1,5 @@
+class Indent7
+  def memberIsAt2(): Boolean
+    return true
+    if true
+        # All identation levels are closed per EOF rule

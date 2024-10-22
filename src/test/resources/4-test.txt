@@ -1,0 +1,4 @@
+class Indent3
+  def memberIsAt2(): Boolean
+  # Comment is ignored, identation level is increased after this line
+    return true
