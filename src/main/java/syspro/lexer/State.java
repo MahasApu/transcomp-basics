@@ -14,7 +14,7 @@ class State {
         STRING,
         RUNE,
         INDENTATION,
-        COMMENTARY, ArrayList;
+        COMMENTARY;
     }
 
 }

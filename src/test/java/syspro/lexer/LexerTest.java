@@ -6,7 +6,9 @@ import syspro.tm.lexer.Token;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
+import static javax.lang.model.SourceVersion.isIdentifier;
 import static org.junit.jupiter.api.Assertions.*;
+import static syspro.lexer.utils.UnicodeReader.codePointToString;
 
 
 class LexerTest {
@@ -55,46 +57,27 @@ class LexerTest {
         lexer.tokenize();
     }
 
-    @Test
-    void isMatched() {
-        //Supplementary character
-        String strTest = "Ident9";
-        Lexer lexer = new Lexer();
-        System.out.println(lexer.isMatched("Ident9"));
-    }
-
-    @Test
-    void isIdentifier() {
-        //Supplementary character
-        String strTest = ">";
-        Lexer lexer = new Lexer();
-        Token token = lexer.tokenizeLexeme();
-        if (Objects.nonNull(token))
-
-            System.out.println(token);
-        else System.out.println("nullable");
-    }
+//    @Test
+//    void isIdentifier() {
+//        //Supplementary character
+//        String strTest = ">";
+//        Lexer lexer = new Lexer();
+//        Token token = lexer.tokenizeLexeme();
+//        if (Objects.nonNull(token))
+//
+//            System.out.println(token);
+//        else System.out.println("nullable");
+//    }
 
     @Test
     void test1() {
         //Supplementary character
-        String strTest = """
-                object PrimitiveIntrinsics<T>
-                    native def default(): T # Available for all primitive or nullable types
-                    # The following are valid only for numeric T
-                    native def one(): T
-                    native def add(left: T, right: T): T
-                    native def subtract(left: T, right: T): T
-                    native def multiply(left: T, right: T): T
-                    native def divide(left: T, right: T): T
-                    native def remainder(left: T, right: T): T
-                    native def less(left: T, right: T): T
-                    native def greater(left: T, right: T): T
-                    native def toString(num: T): String
-                """;
+        String s = """
+class Indent1
+    def notMultipleOf2(): Boolean
+      return true""";
         Lexer lexer = new Lexer();
-        lexer.tokenize().forEach(t -> System.out.println(t.toString()));
-        lexer.tokenize();
+        lexer.lex(s).forEach(t -> System.out.println(t.toString()));
     }
 
     @Test
@@ -169,12 +152,9 @@ class LexerTest {
     @Test
     void test4() {
         String strTest = """
-class Indent7
-  def memberIsAt2(): Boolean
-    return true
-    if true
-        # All identation levels are closed per EOF rule
-                """;
+class Indent1
+   def notMultipleOf2(): Boolean
+      return true""";
 
         Lexer lexer = new Lexer();
         lexer.lex(strTest).forEach(System.out::println);
@@ -197,22 +177,24 @@ class Indent7
     @Test
     void test6() {
         String strTest = """
-class 𝚨𐍁
-    def nameImplicit(): String
-        return "𝚨𐍁"
-    def nameExͯplicit(): String
-        return "\\U+1D6A8\\U+00AD\\U+10341"
-    def letterImplicit(): Rune
-        return '𝚨'
-    def letterExͯplicit(): Rune
-        return '\\U+1D6A8'
-    def number﻿Value(): Int64
-        return 90
-    def numberImplicit(): Rune
-        return '𐍁'
-    def numberExͯplicit(): Rune
-        return '\\U+10341'
+                class 𝚨𐍁
+                    def nameImplicit(): String
+                        return "𝚨­𐍁"
+                    def nameExͯplicit(): String
+                        return "\\U+1D6A8\\U+00AD\\U+10341"
+                    def letterImplicit(): Rune
+                        return '𝚨'
+                    def letterExͯplicit(): Rune
+                        return '\\U+1D6A8'
+                    def number﻿Value(): Int64
+                        return 90
+                    def numberImplicit(): Rune
+                        return '𐍁'
+                    def numberExͯplicit(): Rune
+                        return '\\U+10341'
 """;
+//        System.out.println(is("𝚨𐍁"));
+        System.out.println();
         Lexer lexer = new Lexer();
         lexer.lex(strTest).forEach(System.out::println);
     }
@@ -220,30 +202,15 @@ class 𝚨𐍁
     @Test
     void test7() {
         String strTest = """
-
-    def next(): T
-        if !hasNext()
-            System.failFast("No next element is available in ArrayList<T>")
-        val result = _list[_index] # Will failFast if necessary
-        _index = _index + 1u64
-        return result
-        if _size == _data.length
-            _data = _data.clone(_size * 2, PrimitiveIntrinsics<T>.default())
-        _data[_size] = item
-        _size = _size + 1u64
-    def subscript(index: UInt64): T
-        if index >= _size
-            System.failFast("List element read out of bounds")
-        return _data[index]
-    def subscript(index: UInt64, value: T)
-        if index >= _size
-            System.failFast("List element write out of bounds")
-        _data[index] = value
-    def iterator(): Iterator<T>
-        return ArrayListIterator<T>(this)
-    def toArray(): Array<T>
-        return _data.clone(_size, PrimitiveIntrinsics<T>.default())""";
+                class Indent5
+                  def memberIsAt2(): Boolean
+                    return true
+                      # Comment introduced identation level in the method body (EOF rule is not applicable here)""";
         Lexer lexer = new Lexer();
         lexer.lex(strTest).forEach(System.out::println);
     }
+
+
+
+
 }
