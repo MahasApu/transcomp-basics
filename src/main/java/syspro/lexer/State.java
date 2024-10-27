@@ -1,6 +1,5 @@
 package syspro.lexer;
 
-import java.util.ArrayDeque;
 
 class State {
 
@@ -15,10 +14,7 @@ class State {
         STRING,
         RUNE,
         INDENTATION,
-        COMMENTARY;
+        COMMENTARY, ArrayList;
     }
-
-    private ArrayDeque<ObservedState> newState;
-    private ArrayDeque<ObservedState> oldState;
 
 }

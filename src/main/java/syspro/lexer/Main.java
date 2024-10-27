@@ -4,14 +4,7 @@ import syspro.tm.Tasks;
 public class Main {
 
     public static void main(String[] args) {
-
-//        for (String str: args) System.out.print(str);
-
-//        for (String inputLine : args) {
-        Lexer lexer = new Lexer("inputLine");
+        Lexer lexer = new Lexer();
         Tasks.Lexer.registerSolution(lexer);
-
-//            lexer.tokenize();
-
     }
 }
