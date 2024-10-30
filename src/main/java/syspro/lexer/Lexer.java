@@ -5,66 +5,70 @@ import syspro.tm.lexer.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static java.util.Objects.nonNull;
 import static syspro.lexer.State.ObservedState.*;
 import static syspro.lexer.utils.UnicodePattern.*;
 import static syspro.lexer.utils.UnicodeReader.codePointToString;
 import static syspro.lexer.utils.UnicodeReader.getUnicodePoints;
+import static syspro.lexer.utils.UtilMaps.*;
 
 
 class Lexer implements syspro.tm.lexer.Lexer {
 
     private int curIndentationLevel;
     private int prevIndentationLevel;
-    private int indentationLength = 0;
+    private int indentationLength;
+    private int nextPos = -1;
     private int start;
     private int end;
-    private int nextPos;
 
     private int[] codePoints;
     private StringBuilder symbolBuffer;
     private ArrayList<Token> tokens;
 
     private State.ObservedState curState;
-    final private Map<String, Symbol> symbolMap;
-    final private Map<String, Keyword> keywordMap;
-    final private Map<String, BuiltInType> builtInTypeMap = Map.of(
-            "i32", BuiltInType.INT32,
-            "i64", BuiltInType.INT64,
-            "u32", BuiltInType.UINT32,
-            "u64", BuiltInType.UINT64,
-            "true", BuiltInType.BOOLEAN,
-            "false", BuiltInType.BOOLEAN
-    );
 
     Lexer() {
-        this.nextPos = -1;
-        this.symbolMap = Stream.of(Symbol.values()).collect(Collectors.toMap(k -> k.text, Function.identity()));
-        this.keywordMap = Stream.of(Keyword.values()).collect(Collectors.toMap(k -> k.text, Function.identity()));
         this.curState = DEFAULT;
-        symbolBuffer = new StringBuilder();
-        tokens = new ArrayList<>();
-        end = 0;
-        start = 0;
+        this.symbolBuffer = new StringBuilder();
+        this.tokens = new ArrayList<>();
     }
 
     private void initLexer(String source) {
+        this.symbolBuffer = new StringBuilder();
+        this.tokens = new ArrayList<>();
         this.codePoints = getUnicodePoints(source);
         this.curState = DEFAULT;
-        symbolBuffer = new StringBuilder();
-        tokens = new ArrayList<>();
         this.nextPos = -1;
+    }
+
+    private void resetBuffer() {
+        symbolBuffer = new StringBuilder();
+    }
+
+    private void addNext() {
+        symbolBuffer.append(getNextSymbol());
+    }
+
+    private boolean hasLexeme() {
+        return !symbolBuffer.isEmpty();
+    }
+
+    private String getSymbol(int pos) {
+        assert pos < codePoints.length;
+        return codePointToString(codePoints[pos]);
+    }
+
+    private String getNextSymbol() {
+        assert nextPos < codePoints.length;
+        return codePointToString(codePoints[nextPos]);
     }
 
 
     private String nextCodePoint(int pos) {
-        if (pos + 1 == codePoints.length) return null; // todo: make it safe
+        if (pos + 1 == codePoints.length) return null;
         return codePointToString(codePoints[pos + 1]);
     }
 
@@ -72,7 +76,6 @@ class Lexer implements syspro.tm.lexer.Lexer {
         return Objects.equals(nextCodePoint(nextPos), s);
     }
 
-    // todo: think about BadToken
     private void addToken(Token token) {
         if (nonNull(token)) {
             tokens.add(token);
@@ -81,18 +84,13 @@ class Lexer implements syspro.tm.lexer.Lexer {
         }
     }
 
-    private Token getToken() {
-        end = nextPos - 1;
-        start = nextPos - symbolBuffer.codePoints().toArray().length;
-        return tokenizeLexeme();
-    }
 
-    private SymbolToken readSymbol(String s) {
+    private SymbolToken tokenizeSymbol() {
         curState = SYMBOL;
-        String lexeme = s;
+        String lexeme = symbolBuffer.toString();
         end = nextPos + 1;
         start = nextPos;
-        switch (s) {
+        switch (symbolBuffer.toString()) {
             case ">" -> {
                 if (nextIs("=")) lexeme = ">=";
                 else if (nextIs(">")) lexeme = ">>";
@@ -122,7 +120,9 @@ class Lexer implements syspro.tm.lexer.Lexer {
     }
 
 
-    public Token tokenizeLexeme() {
+    public Token getLiteralToken() {
+        end = nextPos - 1;
+        start = nextPos - symbolBuffer.codePoints().toArray().length;
 
         String lexeme = symbolBuffer.toString();
         Token token = null;
@@ -173,14 +173,12 @@ class Lexer implements syspro.tm.lexer.Lexer {
     public int countTrailingTrivia() {
         int pos = nextPos - 1;
         int count = 0;
-        while (++pos < codePoints.length && (codePointToString(codePoints[pos]).equals(" ") ||
-                codePointToString(codePoints[pos]).equals("\n") ||
-                codePointToString(codePoints[pos]).equals("\t") ||
-                codePointToString(codePoints[pos]).equals("\r"))) {
+        while (++pos < codePoints.length &&
+                (codePoints[pos] == ' ' || codePoints[pos] == '\n' || codePoints[pos] == '\t' || codePoints[pos] == '\r')) {
             count++;
         }
-        if (pos == codePoints.length || !codePointToString(codePoints[pos]).equals("#")) return count;
-        while (++pos < codePoints.length && !codePointToString(codePoints[pos]).equals("\n")) {
+        if (pos == codePoints.length || codePoints[pos] != '#') return count;
+        while (++pos < codePoints.length && codePoints[pos] != '\n') {
             count++;
         }
         return count;
@@ -188,14 +186,12 @@ class Lexer implements syspro.tm.lexer.Lexer {
 
     public int countTrailingTrivia(int pos) {
         int count = 0;
-        while (++pos < codePoints.length && (codePointToString(codePoints[pos]).equals(" ") ||
-                codePointToString(codePoints[pos]).equals("\n") ||
-                codePointToString(codePoints[pos]).equals("\t") ||
-                codePointToString(codePoints[pos]).equals("\r"))) {
+        while (++pos < codePoints.length &&
+                (codePoints[pos] == ' ' || codePoints[pos] == '\n' || codePoints[pos] == '\t' || codePoints[pos] == '\r')) {
             count++;
         }
-        if (pos == codePoints.length || !codePointToString(codePoints[pos]).equals("#")) return count;
-        while (++pos < codePoints.length && !codePointToString(codePoints[pos]).equals("\n")) {
+        if (pos == codePoints.length || codePoints[pos] != '#') return count;
+        while (++pos < codePoints.length && codePoints[pos] != '\n') {
             count++;
         }
         return count;
@@ -215,30 +211,33 @@ class Lexer implements syspro.tm.lexer.Lexer {
         return count;
     }
 
+    private void updateIndentationLevel(int level) {
+        prevIndentationLevel = curIndentationLevel;
+        curIndentationLevel = level;
+    }
+    private void incrementIndentationLevel() {
+        prevIndentationLevel = curIndentationLevel;
+        curIndentationLevel++;
+    }
+
 
     private void calculateIndentation() {
-        int prevInd = curIndentationLevel;
-        assert codePoints[nextPos] == '\n';
-
         if (nextPos + 1 >= codePoints.length) {
-            curIndentationLevel = 0;
-            prevIndentationLevel = prevInd;
+            updateIndentationLevel(0);
             resetIndentation();
             return;
         }
         if (codePoints[nextPos + 1] == '\n') return;
         int count = countIndentationLength(nextPos + 1);
         if (count == 0 || nextPos + 1 + count + 1 >= codePoints.length) {
-            curIndentationLevel = 0;
-            prevIndentationLevel = prevInd;
+            updateIndentationLevel(0);
             resetIndentation();
             return;
         }
         if (count % 2 != 0) return;
 
         if (curIndentationLevel == 0) {
-            curIndentationLevel++;
-            prevIndentationLevel = prevInd;
+            incrementIndentationLevel();
             indentationLength = count;
             resetIndentation();
             return;
@@ -247,15 +246,10 @@ class Lexer implements syspro.tm.lexer.Lexer {
         assert indentationLength != 0;
         if (count % indentationLength != 0) return;
 
-        curIndentationLevel = count / indentationLength;
-        prevIndentationLevel = prevInd;
+        updateIndentationLevel(count / indentationLength);
         resetIndentation();
     }
 
-    private Token getIndentationToken() {
-        calculateIndentation();
-        return null;
-    }
 
     private void resetIndentation() {
         end = start = nextPos;
@@ -270,8 +264,7 @@ class Lexer implements syspro.tm.lexer.Lexer {
 
     void resetIndentationAtTheEnd() {
         if (curIndentationLevel != 0) {
-            prevIndentationLevel = curIndentationLevel;
-            curIndentationLevel = 0;
+            updateIndentationLevel(0);
             resetIndentation();
         }
     }
@@ -289,50 +282,45 @@ class Lexer implements syspro.tm.lexer.Lexer {
         start = nextPos - (int) symbolBuffer.codePoints().count() - 1;
         String rune = symbolBuffer.toString();
         if (isRune(rune))
-            return new RuneLiteralToken(start - countLeadingTrivia(), end + countTrailingTrivia(end),
-                    countLeadingTrivia(), countTrailingTrivia(end), rune.codePointAt(0));
+            return new RuneLiteralToken(start - countLeadingTrivia(), end + countTrailingTrivia(end - 1),
+                    countLeadingTrivia(), countTrailingTrivia(end - 1), rune.codePointAt(0));
         return null;
     }
 
     public List<Token> tokenize() {
         while (++nextPos < codePoints.length) {
-            String nextSymbol = codePointToString(codePoints[nextPos]);
+            String nextSymbol = getNextSymbol();
 
             switch (nextSymbol) {
                 case "#" -> curState = COMMENTARY;
                 case "\n" -> {
                     if (curState.equals(RUNE) || curState.equals(STRING)) {
-                        symbolBuffer.append(nextSymbol);
+                        addNext();
                         break;
                     }
                     if (curState.equals(COMMENTARY)) {
-                        symbolBuffer = new StringBuilder();
+                        resetBuffer();
                         curState = INDENTATION;
                     }
-                    if (!symbolBuffer.isEmpty()) {
-                        addToken(getToken());
-                    }
-                    addToken(getIndentationToken());
+                    if (hasLexeme()) addToken(getLiteralToken());
+                    calculateIndentation();
                 }
                 case " ", "\t", "\r" -> {
                     if (curState.equals(COMMENTARY) || curState.equals(STRING) || curState.equals(RUNE)) {
-                        symbolBuffer.append(nextSymbol);
+                        addNext();
                         break;
                     }
-                    if (!symbolBuffer.isEmpty()) {
-                        addToken(getToken());
-                    }
+                    if (hasLexeme()) addToken(getLiteralToken());
                 }
                 case "=", "<", ">", ".", ",", ":", "-", "+", "*", "/", "%", "!", "~", "&", "|", "^", "[", "]", "(", ")",
                      "?" -> {
                     if (curState.equals(COMMENTARY) || curState.equals(STRING) || curState.equals(RUNE)) {
-                        symbolBuffer.append(nextSymbol);
+                        addNext();
                         break;
                     }
-                    if (!symbolBuffer.isEmpty()) {
-                        addToken(getToken());
-                    }
-                    addToken(readSymbol(nextSymbol));
+                    if (hasLexeme()) addToken(getLiteralToken());
+                    addNext();
+                    addToken(tokenizeSymbol());
                 }
                 case "'" -> {
                     if (curState.equals(RUNE)) {
@@ -350,10 +338,10 @@ class Lexer implements syspro.tm.lexer.Lexer {
                     }
                     curState = STRING;
                 }
-                default -> symbolBuffer.append(nextSymbol);
+                default -> addNext();
             }
         }
-        if (!symbolBuffer.isEmpty()) addToken(getToken());
+        if (hasLexeme()) addToken(getLiteralToken());
         resetIndentationAtTheEnd();
         return tokens;
     }
