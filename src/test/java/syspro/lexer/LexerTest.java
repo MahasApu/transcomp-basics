@@ -164,14 +164,15 @@ class Indent1
     @Test
     void test5() {
         String strTest = """
-  
-    DD
+\n
   class Indent8
-    val x = 42
+val x = 42
 """;
 
         Lexer lexer = new Lexer();
-        lexer.lex(strTest).forEach(System.out::println);
+        for (Token t: lexer.lex(strTest)) {
+            System.out.printf("%s   %d %d\n",t.toString(), t.start, t.end);
+        }
     }
 
     @Test
@@ -209,6 +210,29 @@ class Indent1
         Lexer lexer = new Lexer();
         lexer.lex(strTest).forEach(System.out::println);
     }
+
+
+    @Test
+    void test8() {
+
+        String strTest = """
+                class Indent5
+                  def memberIsAt2(): Boolean
+                    return true
+                      # Comment introduced identation level in the method body (EOF rule is not applicable here)""";
+        Lexer lexer = new Lexer();
+        lexer.lex(strTest).forEach(System.out::println);
+    }
+
+    @Test
+    void test9() {
+
+        String strTest = "\n\n\n    \n";
+        Lexer lexer = new Lexer();
+        lexer.lex(strTest).forEach(System.out::println);
+    }
+
+
 
 
 

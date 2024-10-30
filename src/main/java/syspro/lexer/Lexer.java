@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -21,17 +20,16 @@ import static syspro.lexer.utils.UnicodeReader.getUnicodePoints;
 
 class Lexer implements syspro.tm.lexer.Lexer {
 
-    private int[] codePoints;
-
-
     private int curIndentationLevel;
     private int prevIndentationLevel;
     private int indentationLength = 0;
     private int start;
     private int end;
     private int nextPos;
+
+    private int[] codePoints;
     private StringBuilder symbolBuffer;
-    ArrayList<Token> tokens;
+    private ArrayList<Token> tokens;
 
     private State.ObservedState curState;
     final private Map<String, Symbol> symbolMap;
@@ -51,7 +49,7 @@ class Lexer implements syspro.tm.lexer.Lexer {
         this.keywordMap = Stream.of(Keyword.values()).collect(Collectors.toMap(k -> k.text, Function.identity()));
         this.curState = DEFAULT;
         symbolBuffer = new StringBuilder();
-        tokens = new ArrayList<Token>();
+        tokens = new ArrayList<>();
         end = 0;
         start = 0;
     }
@@ -60,7 +58,7 @@ class Lexer implements syspro.tm.lexer.Lexer {
         this.codePoints = getUnicodePoints(source);
         this.curState = DEFAULT;
         symbolBuffer = new StringBuilder();
-        tokens = new ArrayList<Token>();
+        tokens = new ArrayList<>();
         this.nextPos = -1;
     }
 
@@ -118,7 +116,8 @@ class Lexer implements syspro.tm.lexer.Lexer {
             default -> end--;
         }
         nextPos = end;
-        return new SymbolToken(start - countLeadingTrivia(), end + countTrailingTrivia(), countLeadingTrivia(), countTrailingTrivia(), symbolMap.get(lexeme));
+        return new SymbolToken(start - countLeadingTrivia(), end + countTrailingTrivia(),
+                countLeadingTrivia(), countTrailingTrivia(), symbolMap.get(lexeme));
 
     }
 
@@ -133,17 +132,21 @@ class Lexer implements syspro.tm.lexer.Lexer {
             switch (lexeme) {
                 case "this", "super", "is", "else", "for", "in", "while", "def", "var", "val", "return", "break",
                      "continue", "abstract", "virtual", "override", "native" -> {
-                    token = new KeywordToken(start - countLeadingTrivia(), end + countTrailingTrivia(), countLeadingTrivia(), countTrailingTrivia(), keywordMap.get(lexeme));
+                    token = new KeywordToken(start - countLeadingTrivia(), end + countTrailingTrivia(),
+                            countLeadingTrivia(), countTrailingTrivia(), keywordMap.get(lexeme));
                 }
                 case "class", "object", "interface", "null" -> {
-                    token = new IdentifierToken(start - countLeadingTrivia(), end + countTrailingTrivia(), countLeadingTrivia(), countTrailingTrivia(), lexeme, keywordMap.get(lexeme));
+                    token = new IdentifierToken(start - countLeadingTrivia(), end + countTrailingTrivia(),
+                            countLeadingTrivia(), countTrailingTrivia(), lexeme, keywordMap.get(lexeme));
                 }
                 case "true", "false" -> {
-                    token = new BooleanLiteralToken(start - countLeadingTrivia(), end + countTrailingTrivia(), countLeadingTrivia(), countTrailingTrivia(), Boolean.parseBoolean(lexeme));
+                    token = new BooleanLiteralToken(start - countLeadingTrivia(), end + countTrailingTrivia(),
+                            countLeadingTrivia(), countTrailingTrivia(), Boolean.parseBoolean(lexeme));
                 }
                 default -> {
                     if (isIdentifier(lexeme))
-                        token = new IdentifierToken(start - countLeadingTrivia(), end + countTrailingTrivia(), countLeadingTrivia(), countTrailingTrivia(), lexeme, null);
+                        token = new IdentifierToken(start - countLeadingTrivia(), end + countTrailingTrivia(),
+                                countLeadingTrivia(), countTrailingTrivia(), lexeme, null);
 
                 }
             }
@@ -156,11 +159,13 @@ class Lexer implements syspro.tm.lexer.Lexer {
             try {
                 value = Long.parseLong(lexeme);
             } catch (NumberFormatException e) {
-                type = builtInTypeMap.get(lexeme.substring(lexeme.length() - 3));
+                String typeName = lexeme.substring(lexeme.length() - 3);
+                type = builtInTypeMap.get(typeName);
                 hasSuffix = true;
                 value = Long.parseLong(lexeme.substring(0, lexeme.length() - 3));
             }
-            token = new IntegerLiteralToken(start - countLeadingTrivia(), end + countTrailingTrivia(), countLeadingTrivia(), countTrailingTrivia(), type, hasSuffix, value);
+            token = new IntegerLiteralToken(start - countLeadingTrivia(), end + countTrailingTrivia(),
+                    countLeadingTrivia(), countTrailingTrivia(), type, hasSuffix, value);
         }
         return token;
     }
@@ -197,87 +202,75 @@ class Lexer implements syspro.tm.lexer.Lexer {
     }
 
     public int countLeadingTrivia() {
-        return tokens.isEmpty() ? countTrailingTrivia(0) : 0;
+        return curState.equals(INDENTATION) ? countTrailingTrivia(start) : 0;
     }
 
 
     private int countIndentationLength(int pos) {
         int count = 0;
-        String nextSymbol = codePointToString(codePoints[++pos]);
-        while (pos++ < codePoints.length - 1 && (nextSymbol.equals(" ") || nextSymbol.equals("\t"))) {
-            count += nextSymbol.equals("\t") ? 2 : 1;
-            nextSymbol = codePointToString(codePoints[pos]);
+        while (pos < codePoints.length - 1 && (codePoints[pos] == ' ' || codePoints[pos] == '\t')) {
+            count += codePoints[pos] == '\t' ? 2 : 1;
+            pos++;
         }
         return count;
-
     }
 
 
     private void calculateIndentation() {
         int prevInd = curIndentationLevel;
+        assert codePoints[nextPos] == '\n';
+
         if (nextPos + 1 >= codePoints.length) {
-            prevIndentationLevel = prevInd;
             curIndentationLevel = 0;
-            indentationLength = 0;
+            prevIndentationLevel = prevInd;
+            resetIndentation();
             return;
         }
-        if (codePointToString(codePoints[nextPos + 1]).equals("\n")) return;
+        if (codePoints[nextPos + 1] == '\n') return;
+        int count = countIndentationLength(nextPos + 1);
+        if (count == 0 || nextPos + 1 + count + 1 >= codePoints.length) {
+            curIndentationLevel = 0;
+            prevIndentationLevel = prevInd;
+            resetIndentation();
+            return;
+        }
+        if (count % 2 != 0) return;
 
-        if (nextPos + indentationLength + 1 >= codePoints.length) {
-            curIndentationLevel = 0;
-            prevIndentationLevel = prevInd;
-            indentationLength = 0;
-            return;
-        }
-
-        int count = countIndentationLength(nextPos + indentationLength + 1);
-        if (codePointToString(codePoints[nextPos + indentationLength + 1]).equals("\n")) return;
-        if (count == 0) {
-            curIndentationLevel = 0;
-            prevIndentationLevel = prevInd;
-            indentationLength = 0;
-            return;
-        }
-        if (countIndentationLength(nextPos) % 2 != 0) return;
         if (curIndentationLevel == 0) {
             curIndentationLevel++;
             prevIndentationLevel = prevInd;
             indentationLength = count;
-            return;
-        }
-        if (countIndentationLength(nextPos) % indentationLength != 0) return;
-        if (countIndentationLength(nextPos) == 0) {
-            prevIndentationLevel = prevInd;
-            curIndentationLevel = 0;
-            indentationLength = 0;
+            resetIndentation();
             return;
         }
 
-        curIndentationLevel = indentationLength != 0 ? countIndentationLength(nextPos) / indentationLength : 0;
+        assert indentationLength != 0;
+        if (count % indentationLength != 0) return;
+
+        curIndentationLevel = count / indentationLength;
         prevIndentationLevel = prevInd;
-    }
-
-    private int indentationDifference() {
-        calculateIndentation();
-        return curIndentationLevel - prevIndentationLevel;
+        resetIndentation();
     }
 
     private Token getIndentationToken() {
-        int difference = indentationDifference();
-        return difference == 0 ? null : new IndentationToken(start, end, countLeadingTrivia(), 0, difference);
+        calculateIndentation();
+        return null;
     }
 
     private void resetIndentation() {
-        int difference = prevIndentationLevel - curIndentationLevel;
-        if (difference <= 0) return;
+        end = start = nextPos;
+        int difference = curIndentationLevel - prevIndentationLevel;
+        if (difference == 0) return;
+        int sign = difference > 0 ? 1 : -1;
+        difference *= sign;
         while (difference-- > 0) {
-            addToken(new IndentationToken(end, end, 0, 0, -1));
+            addToken(new IndentationToken(end, end, 0, 0, sign));
         }
     }
 
     void resetIndentationAtTheEnd() {
         if (curIndentationLevel != 0) {
-            nextPos--;
+            prevIndentationLevel = curIndentationLevel;
             curIndentationLevel = 0;
             resetIndentation();
         }
@@ -286,7 +279,8 @@ class Lexer implements syspro.tm.lexer.Lexer {
     private Token getStringLiteralToken() {
         end = nextPos;
         start = nextPos - (int) symbolBuffer.codePoints().count() - 1;
-        return new StringLiteralToken(start - countLeadingTrivia(), end + countTrailingTrivia(end), countLeadingTrivia(), countTrailingTrivia(end), symbolBuffer.toString());
+        return new StringLiteralToken(start - countLeadingTrivia(), end + countTrailingTrivia(end),
+                countLeadingTrivia(), countTrailingTrivia(end), symbolBuffer.toString());
     }
 
 
@@ -295,7 +289,8 @@ class Lexer implements syspro.tm.lexer.Lexer {
         start = nextPos - (int) symbolBuffer.codePoints().count() - 1;
         String rune = symbolBuffer.toString();
         if (isRune(rune))
-            return new RuneLiteralToken(start - countLeadingTrivia(), end + countTrailingTrivia(end), countLeadingTrivia(), countTrailingTrivia(end), rune.codePointAt(0));
+            return new RuneLiteralToken(start - countLeadingTrivia(), end + countTrailingTrivia(end),
+                    countLeadingTrivia(), countTrailingTrivia(end), rune.codePointAt(0));
         return null;
     }
 
@@ -313,14 +308,11 @@ class Lexer implements syspro.tm.lexer.Lexer {
                     if (curState.equals(COMMENTARY)) {
                         symbolBuffer = new StringBuilder();
                         curState = INDENTATION;
-                        break;
                     }
                     if (!symbolBuffer.isEmpty()) {
                         addToken(getToken());
                     }
-                    curState = curState.equals(COMMENTARY) ? INDENTATION : curState;
                     addToken(getIndentationToken());
-                    resetIndentation();
                 }
                 case " ", "\t", "\r" -> {
                     if (curState.equals(COMMENTARY) || curState.equals(STRING) || curState.equals(RUNE)) {
