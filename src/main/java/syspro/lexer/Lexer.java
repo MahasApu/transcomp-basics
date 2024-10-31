@@ -17,6 +17,10 @@ import static syspro.lexer.utils.UtilMaps.*;
 
 class Lexer implements syspro.tm.lexer.Lexer {
 
+
+    private int countLeadingTrivia;
+    private int countTrailingTrivia;
+
     private int curIndentationLevel;
     private int prevIndentationLevel;
     private int indentationLength;
@@ -37,6 +41,7 @@ class Lexer implements syspro.tm.lexer.Lexer {
     }
 
     private void initLexer(String source) {
+        countTrailingTrivia = countLeadingTrivia = 0;
         this.symbolBuffer = new StringBuilder();
         this.tokens = new ArrayList<>();
         this.codePoints = getUnicodePoints(source);
@@ -82,6 +87,8 @@ class Lexer implements syspro.tm.lexer.Lexer {
             symbolBuffer = new StringBuilder();
             start = end = nextPos;
         }
+        if (curState.equals(INDENTATION)) return;
+        countTrailingTrivia = countLeadingTrivia = 0;
     }
 
 
@@ -114,8 +121,8 @@ class Lexer implements syspro.tm.lexer.Lexer {
             default -> end--;
         }
         nextPos = end;
-        return new SymbolToken(start - countLeadingTrivia(), end + countTrailingTrivia(),
-                countLeadingTrivia(), countTrailingTrivia(), symbolMap.get(lexeme));
+        return new SymbolToken(start - countLeadingTrivia, end + countTrailingTrivia,
+                countLeadingTrivia, countTrailingTrivia, symbolMap.get(lexeme));
 
     }
 
@@ -132,21 +139,21 @@ class Lexer implements syspro.tm.lexer.Lexer {
             switch (lexeme) {
                 case "this", "super", "is", "else", "for", "in", "while", "def", "var", "val", "return", "break",
                      "continue", "abstract", "virtual", "override", "native" -> {
-                    token = new KeywordToken(start - countLeadingTrivia(), end + countTrailingTrivia(),
-                            countLeadingTrivia(), countTrailingTrivia(), keywordMap.get(lexeme));
+                    token = new KeywordToken(start - countLeadingTrivia, end + countTrailingTrivia,
+                            countLeadingTrivia, countTrailingTrivia, keywordMap.get(lexeme));
                 }
                 case "class", "object", "interface", "null" -> {
-                    token = new IdentifierToken(start - countLeadingTrivia(), end + countTrailingTrivia(),
-                            countLeadingTrivia(), countTrailingTrivia(), lexeme, keywordMap.get(lexeme));
+                    token = new IdentifierToken(start - countLeadingTrivia, end + countTrailingTrivia,
+                            countLeadingTrivia, countTrailingTrivia, lexeme, keywordMap.get(lexeme));
                 }
                 case "true", "false" -> {
-                    token = new BooleanLiteralToken(start - countLeadingTrivia(), end + countTrailingTrivia(),
-                            countLeadingTrivia(), countTrailingTrivia(), Boolean.parseBoolean(lexeme));
+                    token = new BooleanLiteralToken(start - countLeadingTrivia, end + countTrailingTrivia,
+                            countLeadingTrivia, countTrailingTrivia, Boolean.parseBoolean(lexeme));
                 }
                 default -> {
                     if (isIdentifier(lexeme))
-                        token = new IdentifierToken(start - countLeadingTrivia(), end + countTrailingTrivia(),
-                                countLeadingTrivia(), countTrailingTrivia(), lexeme, null);
+                        token = new IdentifierToken(start - countLeadingTrivia, end + countTrailingTrivia,
+                                countLeadingTrivia, countTrailingTrivia, lexeme, null);
 
                 }
             }
@@ -164,41 +171,10 @@ class Lexer implements syspro.tm.lexer.Lexer {
                 hasSuffix = true;
                 value = Long.parseLong(lexeme.substring(0, lexeme.length() - 3));
             }
-            token = new IntegerLiteralToken(start - countLeadingTrivia(), end + countTrailingTrivia(),
-                    countLeadingTrivia(), countTrailingTrivia(), type, hasSuffix, value);
+            token = new IntegerLiteralToken(start - countLeadingTrivia, end + countTrailingTrivia,
+                    countLeadingTrivia, countTrailingTrivia, type, hasSuffix, value);
         }
         return token;
-    }
-
-    public int countTrailingTrivia() {
-        int pos = nextPos - 1;
-        int count = 0;
-        while (++pos < codePoints.length &&
-                (codePoints[pos] == ' ' || codePoints[pos] == '\n' || codePoints[pos] == '\t' || codePoints[pos] == '\r')) {
-            count++;
-        }
-        if (pos == codePoints.length || codePoints[pos] != '#') return count;
-        while (++pos < codePoints.length && codePoints[pos] != '\n') {
-            count++;
-        }
-        return count;
-    }
-
-    public int countTrailingTrivia(int pos) {
-        int count = 0;
-        while (++pos < codePoints.length &&
-                (codePoints[pos] == ' ' || codePoints[pos] == '\n' || codePoints[pos] == '\t' || codePoints[pos] == '\r')) {
-            count++;
-        }
-        if (pos == codePoints.length || codePoints[pos] != '#') return count;
-        while (++pos < codePoints.length && codePoints[pos] != '\n') {
-            count++;
-        }
-        return count;
-    }
-
-    public int countLeadingTrivia() {
-        return curState.equals(INDENTATION) ? countTrailingTrivia(start) : 0;
     }
 
 
@@ -215,6 +191,7 @@ class Lexer implements syspro.tm.lexer.Lexer {
         prevIndentationLevel = curIndentationLevel;
         curIndentationLevel = level;
     }
+
     private void incrementIndentationLevel() {
         prevIndentationLevel = curIndentationLevel;
         curIndentationLevel++;
@@ -272,8 +249,8 @@ class Lexer implements syspro.tm.lexer.Lexer {
     private Token getStringLiteralToken() {
         end = nextPos;
         start = nextPos - (int) symbolBuffer.codePoints().count() - 1;
-        return new StringLiteralToken(start - countLeadingTrivia(), end + countTrailingTrivia(end),
-                countLeadingTrivia(), countTrailingTrivia(end), symbolBuffer.toString());
+        return new StringLiteralToken(start - countLeadingTrivia, end + countTrailingTrivia,
+                countLeadingTrivia, countTrailingTrivia, symbolBuffer.toString());
     }
 
 
@@ -282,27 +259,35 @@ class Lexer implements syspro.tm.lexer.Lexer {
         start = nextPos - (int) symbolBuffer.codePoints().count() - 1;
         String rune = symbolBuffer.toString();
         if (isRune(rune))
-            return new RuneLiteralToken(start - countLeadingTrivia(), end + countTrailingTrivia(end - 1),
-                    countLeadingTrivia(), countTrailingTrivia(end - 1), rune.codePointAt(0));
+            return new RuneLiteralToken(start - countLeadingTrivia, end + countTrailingTrivia,
+                    countLeadingTrivia, countTrailingTrivia, rune.codePointAt(0));
         return null;
     }
 
     public List<Token> tokenize() {
         while (++nextPos < codePoints.length) {
             String nextSymbol = getNextSymbol();
-
+            Token token = null;
             switch (nextSymbol) {
-                case "#" -> curState = COMMENTARY;
+                case "#" -> {
+                    countLeadingTrivia++;
+                    curState = COMMENTARY;
+                }
                 case "\n" -> {
                     if (curState.equals(RUNE) || curState.equals(STRING)) {
                         addNext();
                         break;
                     }
                     if (curState.equals(COMMENTARY)) {
+                        countLeadingTrivia += symbolBuffer.length();
                         resetBuffer();
-                        curState = INDENTATION;
                     }
-                    if (hasLexeme()) addToken(getLiteralToken());
+                    if (hasLexeme()) {
+                        countTrailingTrivia++;
+                        addToken(getLiteralToken());
+                    }
+                    else countLeadingTrivia++;
+                    curState = INDENTATION;
                     calculateIndentation();
                 }
                 case " ", "\t", "\r" -> {
@@ -310,7 +295,11 @@ class Lexer implements syspro.tm.lexer.Lexer {
                         addNext();
                         break;
                     }
-                    if (hasLexeme()) addToken(getLiteralToken());
+                    if (hasLexeme()) {
+                        countTrailingTrivia++;
+                        addToken(getLiteralToken());
+                    }
+                    else countLeadingTrivia++;
                 }
                 case "=", "<", ">", ".", ",", ":", "-", "+", "*", "/", "%", "!", "~", "&", "|", "^", "[", "]", "(", ")",
                      "?" -> {
@@ -323,6 +312,10 @@ class Lexer implements syspro.tm.lexer.Lexer {
                     addToken(tokenizeSymbol());
                 }
                 case "'" -> {
+                    if (curState.equals(COMMENTARY)) {
+                        addNext();
+                        break;
+                    }
                     if (curState.equals(RUNE)) {
                         addToken(getRuneLiteralToken());
                         curState = DEFAULT;
@@ -331,6 +324,10 @@ class Lexer implements syspro.tm.lexer.Lexer {
                     curState = RUNE;
                 }
                 case "\"" -> {
+                    if (curState.equals(COMMENTARY)) {
+                        addNext();
+                        break;
+                    }
                     if (curState.equals(STRING)) {
                         addToken(getStringLiteralToken());
                         curState = DEFAULT;
