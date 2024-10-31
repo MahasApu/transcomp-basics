@@ -1,5 +1,7 @@
 package syspro.lexer;
 import syspro.tm.Tasks;
+import syspro.tm.lexer.TestLineTerminators;
+import syspro.tm.lexer.TestMode;
 
 public class Main {
 
