@@ -312,8 +312,6 @@ class Lexer implements syspro.tm.lexer.Lexer {
         return ctx.tokens;
     }
 
-    int testCounter;
-
     @Override
     public List<Token> lex(String s) {
         Context ctx = new Context(s);

@@ -86,8 +86,8 @@ public class Context {
         if (Objects.isNull(token)) {
             tokens.add(new BadToken(nextPos, nextPos, 0, 0));
             curState = DEFAULT;
-            start = end = nextPos;
             resetBuffer();
+            return;
         } else {
             tokens.add(token);
             resetBuffer();
@@ -135,7 +135,8 @@ public class Context {
 
     void updateToken() {
         int counter = tokens.size() - 1;
-        while (counter - 1 >= 0 && tokens.get(counter) instanceof IndentationToken) {
+        while (counter - 1 >= 0 && tokens.get(counter) instanceof IndentationToken
+                                || tokens.get(counter) instanceof BadToken) {
             counter--;
         }
         Token token = tokens.get(counter);

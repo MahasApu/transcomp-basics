@@ -58,7 +58,6 @@ public class UnicodePattern {
     }
 
     static public boolean isIdentifierContinue(String s) {
-        assert s.length() == 1;
         String regex = "[\\p{L}\\p{Nl}|\\p{Nd}\\p{Mn}\\p{Mc}\\p{Cf}]";
         return Pattern.compile(regex).matcher(s).matches();
     }
