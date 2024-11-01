@@ -84,10 +84,9 @@ public class Context {
 
     void putToken(Token token) {
         if (Objects.isNull(token)) {
-            tokens.add(new BadToken(nextPos, nextPos, 0, 0));
+            tokens.add(new BadToken(nextPos, nextPos, countLeadingTrivia, countTrailingTrivia));
             curState = DEFAULT;
             resetBuffer();
-            return;
         } else {
             tokens.add(token);
             resetBuffer();
@@ -135,8 +134,7 @@ public class Context {
 
     void updateToken() {
         int counter = tokens.size() - 1;
-        while (counter - 1 >= 0 && tokens.get(counter) instanceof IndentationToken
-                                || tokens.get(counter) instanceof BadToken) {
+        while (counter - 1 >= 0 && tokens.get(counter) instanceof IndentationToken) {
             counter--;
         }
         Token token = tokens.get(counter);
@@ -159,6 +157,7 @@ public class Context {
                     new StringLiteralToken(s.start, s.end + countLeadingTrivia, s.leadingTriviaLength, s.trailingTriviaLength + countLeadingTrivia, s.value);
             case SymbolToken s ->
                     new SymbolToken(s.start, s.end + countLeadingTrivia, s.leadingTriviaLength, s.trailingTriviaLength + countLeadingTrivia, s.symbol);
+            case BadToken b -> new BadToken(b.start, b.end, b.leadingTriviaLength, b.trailingTriviaLength + countLeadingTrivia);
             default -> throw new IllegalStateException("Unexpected value: " + tokenToUpdate);
         };
     }
