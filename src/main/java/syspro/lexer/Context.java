@@ -90,8 +90,8 @@ public class Context {
         } else {
             tokens.add(token);
             resetBuffer();
-            start = end = nextPos;
         }
+        start = end = nextPos;
         if (curState.equals(INDENTATION)) return;
         countTrailingTrivia = countLeadingTrivia = 0;
     }
