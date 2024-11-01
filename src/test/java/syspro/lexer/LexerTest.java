@@ -14,17 +14,6 @@ import static syspro.lexer.utils.UnicodeReader.codePointToString;
 class LexerTest {
 
     @Test
-    void supplementaryChar() {
-        //Supplementary character
-        String strTest = """
-                a𐐀
-                
-                """;
-        Lexer lexer = new Lexer();
-        lexer.tokenize().forEach(t -> System.out.println(t.toString()));
-    }
-
-    @Test
     void moreOrEqualChar() {
         //Supplementary character
         String strTest = """
@@ -46,28 +35,6 @@ class LexerTest {
         lexer.lex(strTest).forEach(t -> System.out.println(t.toString()));
     }
 
-    @Test
-    void identifier() {
-        //Supplementary character
-        String strTest = """
-                Ident9
-                
-                """;
-        Lexer lexer = new Lexer();
-        lexer.tokenize();
-    }
-
-//    @Test
-//    void isIdentifier() {
-//        //Supplementary character
-//        String strTest = ">";
-//        Lexer lexer = new Lexer();
-//        Token token = lexer.tokenizeLexeme();
-//        if (Objects.nonNull(token))
-//
-//            System.out.println(token);
-//        else System.out.println("nullable");
-//    }
 
     @Test
     void test1() {
@@ -98,20 +65,10 @@ class Indent1
                 355453 34743 3939
                 """;
         Lexer lexer = new Lexer();
-        lexer.tokenize().forEach(t -> System.out.println(t.toString()));
+//        lexer.tokenize().forEach(t -> System.out.println(t.toString()));
     }
 
-    @Test
-    void unicodeEscapes() {
-        //Supplementary character
-        String strTest = """
-                \\a \\b
-                """;
 
-        System.out.println(strTest);
-        Lexer lexer = new Lexer();
-        lexer.tokenize().forEach(t -> System.out.println(t.toString()));
-    }
 
     @Test
     void testForIdentifier() {
@@ -200,6 +157,30 @@ val x = 42
         lexer.lex(strTest).forEach(System.out::println);
     }
 
+    int nextPos = 3;
+    String s = "aaa    # sss";
+    int[] codePoints = s.codePoints().toArray();
+
+    public int processTrailingTrivia(int nextPos) {
+        int pos = nextPos - 1;
+        int count = 0;
+        if (pos + 1 >= codePoints.length) return count;
+        if (codePoints[pos + 1] == '#') {
+            while (pos++ < codePoints.length || codePoints[pos] != '\n') count++;
+        }
+        while (pos++ < codePoints.length && (codePoints[pos] == ' ' || codePoints[pos] == '\t' || codePoints[pos] == '\r' || codePoints[pos] == '\n')) {
+            count++;
+        }
+        if (pos >= codePoints.length || codePoints[pos] != '#') return count;
+        return count + processTrailingTrivia(pos);
+    }
+
+
+    @Test
+    void test0() {
+        System.out.println(processTrailingTrivia(3));
+    }
+
     @Test
     void test7() {
         String strTest = """
@@ -211,6 +192,19 @@ val x = 42
         lexer.lex(strTest).forEach(System.out::println);
     }
 
+
+    @Test
+    void test23() {
+
+        String strTest =
+           """
+class Indent1
+   def notMultipleOf2(): Boolean
+      return true
+           """;
+        Lexer lexer = new Lexer();
+        lexer.lex(strTest).forEach(System.out::println);
+    }
 
     @Test
     void test8() {
@@ -226,8 +220,8 @@ val x = 42
 
     @Test
     void test9() {
-
-        String strTest = "\n\n\n    \n";
+//        String strTest = "\n\n\n var x = €n  \n";
+        String strTest = "6997i32 ssasf<T>  var x = €\0i=8";
         Lexer lexer = new Lexer();
         lexer.lex(strTest).forEach(System.out::println);
     }

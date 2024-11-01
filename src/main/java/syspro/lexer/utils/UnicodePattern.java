@@ -27,10 +27,51 @@ public class UnicodePattern {
         return Pattern.compile(LETTER_CHARACTER.text).matcher(s).matches();
     }
 
+    static private boolean isPunctuation(String s) {
+        return Pattern.compile(PUNCTUATION.text).matcher(s).matches();
+    }
+
+    static private boolean isNumberLiteral(String s) {
+        return Pattern.compile(NUMBER_LITERAL.text).matcher(s).matches();
+    }
+
+    static private boolean isNoneSpacingMark(String s) {
+        return Pattern.compile(NON_SPACING_MARK.text).matcher(s).matches();
+    }
+
+    static private boolean isSpacingMark(String s) {
+        return Pattern.compile(SPACING_MARK.text).matcher(s).matches();
+    }
+
+    static private boolean isFormat(String s) {
+        return Pattern.compile(FORMAT.text).matcher(s).matches();
+    }
+
+    static private boolean isUnicodeScore(String s) {
+        return Pattern.compile(UNICODE_SCORE.text).matcher(s).matches();
+    }
+
     static public boolean isIdentifierStart(String s) {
+        if (s.isEmpty()) return false;
         String firstSymbol = codePointToString(s.codePoints().toArray()[0]);
         return isLetterCharacter(firstSymbol) || firstSymbol.equals("_");
     }
+
+    static public boolean isIdentifierContinue(String s) {
+        assert s.length() == 1;
+        String regex = "[\\p{L}\\p{Nl}|\\p{Nd}\\p{Mn}\\p{Mc}\\p{Cf}]";
+        return Pattern.compile(regex).matcher(s).matches();
+    }
+
+
+    static public boolean isKeyword(String s) {
+        return UtilMaps.keywordMap.containsKey(s);
+    }
+
+    static public boolean isBoolean(String s) {
+        return s.equals("true") || s.equals("false");
+    }
+
 
     static public boolean isIdentifier(String s) {
         String regex = "[\\p{L}\\p{Nl}|_-]+[\\p{L}\\p{Nl}|\\p{Nd}\\p{Mn}\\p{Mc}\\p{Cf}]*";
@@ -39,6 +80,10 @@ public class UnicodePattern {
 
     static public boolean isNumber(String s) {
         return Pattern.compile("(^\\p{Nd}+(i64|i32|u32|u64)?)$").matcher(s).matches();
+    }
+
+    static public boolean isDigit(String s) {
+        return isNumberLiteral(s);
     }
 
     static public boolean isRune(String s) {

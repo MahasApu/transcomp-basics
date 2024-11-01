@@ -39,7 +39,7 @@ class Lexer implements syspro.tm.lexer.Lexer {
         }
         if (ctx.isNewline(ctx.nextPos + 1)) return;
         int count = countIndentationLength(ctx, ctx.nextPos + 1);
-        if (count == 0 || ctx.isEOF(ctx.nextPos + 1 + count + 1)) {
+        if (count == 0 || ctx.isEOF(ctx.nextPos + 1 + count)) {
             updateIndentationLevel(ctx, 0);
             resetIndentation(ctx);
             return;
@@ -67,7 +67,7 @@ class Lexer implements syspro.tm.lexer.Lexer {
         int sign = difference > 0 ? 1 : -1;
         difference *= sign;
         while (difference-- > 0) {
-            ctx.addToken(new IndentationToken(ctx.nextPos - ctx.countNewlineLen(),  ctx.nextPos, 0, 0, sign));
+            ctx.putToken(new IndentationToken(ctx.nextPos - ctx.countNewlineLen(), ctx.nextPos, 0, 0, sign));
         }
     }
 
@@ -81,47 +81,72 @@ class Lexer implements syspro.tm.lexer.Lexer {
     private SymbolToken getSymbolToken(Context ctx) {
         ctx.curState = SYMBOL;
         String lexeme = ctx.symbolBuffer.toString();
-        ctx.end = ctx.nextPos + 1;
-        ctx.start = ctx.nextPos;
+        ctx.start = ctx.end = ctx.nextPos;
+
         switch (ctx.symbolBuffer.toString()) {
             case ">" -> {
-                if (ctx.nextIs("=")) lexeme = ">=";
-                else if (ctx.nextIs(">")) lexeme = ">>";
-                else ctx.end--;
+                if (ctx.isNext("=")) lexeme = ">=";
+                else if (ctx.isNext(">")) lexeme = ">>";
             }
             case "<" -> {
-                if (ctx.nextIs("=")) lexeme = "<=";
-                else if (ctx.nextIs("<")) lexeme = "<<";
-                else if (ctx.nextIs(":")) lexeme = "<:";
-                else ctx.end--;
+                if (ctx.isNext("=")) lexeme = "<=";
+                else if (ctx.isNext("<")) lexeme = "<<";
+                else if (ctx.isNext(":")) lexeme = "<:";
             }
             case "=" -> {
-                if (ctx.nextIs("=")) lexeme = "==";
-                else if (ctx.nextIs("!")) lexeme = "!=";
-                else ctx.end--;
+                if (ctx.isNext("=")) lexeme = "==";
+                else if (ctx.isNext("!")) lexeme = "!=";
             }
             case "&" -> {
-                if (ctx.nextIs("&")) lexeme = "&";
-                else ctx.end--;
+                if (ctx.isNext("&")) lexeme = "&";
             }
-            default -> ctx.end--;
+            default -> {
+                if (!symbolMap.containsKey(lexeme)) return null;
+            }
         }
-        ctx.nextPos = ctx.end;
+
+        int shift = lexeme.length() == 2 ? 1 : 0;
+        ctx.end = ctx.nextPos += shift;
+
         return new SymbolToken(ctx.start - ctx.countLeadingTrivia, ctx.end + ctx.countTrailingTrivia,
                 ctx.countLeadingTrivia, ctx.countTrailingTrivia, symbolMap.get(lexeme));
 
     }
 
+    void scanIdentifier(Context ctx) {
+        ctx.putNext();
+        ctx.nextPos++;
+
+        while (!ctx.isEOF(ctx.nextPos)) {
+            boolean isIdentifierPart = isIdentifierContinue(ctx.symbol());
+            if (!isIdentifierPart) {
+                String lexeme = ctx.symbolBuffer.toString();
+                if (isBoolean(lexeme)) {
+                    ctx.curState = BOOLEAN;
+                } else if (isKeyword(lexeme)) {
+                    ctx.curState = KEYWORD;
+                } else {
+                    ctx.curState = IDENTIFIER;
+                }
+                break;
+
+            } else {
+                ctx.putNext();
+                ctx.nextPos++;
+            }
+        }
+        ctx.cancel();
+    }
+
 
     public Token getLiteralToken(Context ctx) {
-        ctx.end = ctx.nextPos - 1;
-        ctx.start = ctx.nextPos - ctx.bufferLen();
+        ctx.end = ctx.nextPos;
+        ctx.start = ctx.nextPos - ctx.bufferLen() + 1;
 
         String lexeme = ctx.symbolBuffer.toString();
         Token token = null;
 
         if (isIdentifierStart(lexeme)) {
-            ctx.curState = IDENTIFIER;
             switch (lexeme) {
                 case "this", "super", "is", "else", "for", "in", "while", "def", "var", "val", "return", "break",
                      "continue", "abstract", "virtual", "override", "native" -> {
@@ -143,7 +168,41 @@ class Lexer implements syspro.tm.lexer.Lexer {
 
                 }
             }
-        } else if (isNumber(lexeme)) {
+        }
+        return token;
+    }
+
+
+    void scanNumber(Context ctx) {
+        ctx.putNext();
+        ctx.nextPos++;
+
+        while (!ctx.isEOF(ctx.nextPos)) {
+            boolean isDigit = isDigit(ctx.symbol());
+
+            if (!isDigit) {
+                String suffix = ctx.hasSuffix() ? ctx.getSuffix() : "";
+                ctx.symbolBuffer.append(suffix);
+                ctx.nextPos += suffix.length();
+                ctx.curState = NUMBER;
+                break;
+            } else {
+                ctx.putNext();
+                ctx.nextPos++;
+            }
+        }
+        ctx.cancel();
+    }
+
+
+    Token getIntegerToken(Context ctx) {
+        ctx.end = ctx.nextPos;
+        ctx.start = ctx.nextPos - ctx.bufferLen() + 1;
+
+        String lexeme = ctx.symbolBuffer.toString();
+        Token token = null;
+
+        if (isNumber(lexeme)) {
             ctx.curState = NUMBER;
             BuiltInType type = BuiltInType.INT64;
             boolean hasSuffix = false;
@@ -152,10 +211,11 @@ class Lexer implements syspro.tm.lexer.Lexer {
             try {
                 value = Long.parseLong(lexeme);
             } catch (NumberFormatException e) {
-                String typeName = lexeme.substring(lexeme.length() - 3);
+                int typeNameLen = 3;
+                String typeName = lexeme.substring(lexeme.length() - typeNameLen);
                 type = builtInTypeMap.get(typeName);
                 hasSuffix = true;
-                value = Long.parseLong(lexeme.substring(0, lexeme.length() - 3));
+                value = Long.parseLong(lexeme.substring(0, lexeme.length() - typeNameLen));
             }
             token = new IntegerLiteralToken(ctx.start - ctx.countLeadingTrivia, ctx.end + ctx.countTrailingTrivia,
                     ctx.countLeadingTrivia, ctx.countTrailingTrivia, type, hasSuffix, value);
@@ -185,53 +245,38 @@ class Lexer implements syspro.tm.lexer.Lexer {
 
     public List<Token> tokenize(Context ctx) {
         while (!ctx.isEOF(++ctx.nextPos)) {
-            String nextSymbol = ctx.nextSymbol();
+            String nextSymbol = ctx.symbol();
 
             if (ctx.isState(COMMENTARY) && !ctx.isNewline()) {
-                ctx.addTrivia(ctx);
+                ctx.putTrivia();
                 continue;
             }
+            if ((ctx.isState(RUNE) || ctx.isState(STRING)) && !ctx.isSymbol("'") && !ctx.isSymbol("\"")) {
+                ctx.putNext();
+                continue;
+            }
+
             switch (nextSymbol) {
                 case "#" -> {
-                    ctx.countLeadingTrivia++;
+                    ctx.putTrivia();
                     ctx.curState = COMMENTARY;
                 }
                 case "\n" -> {
-                    if (ctx.isState(RUNE) || ctx.isState(STRING)) {
-                        ctx.addNext();
-                        break;
-                    }
-                    if (ctx.isState(COMMENTARY)) {
-                        ctx.countLeadingTrivia += ctx.symbolBuffer.length();
-                        ctx.resetBuffer();
-                    }
-                    if (ctx.hasLexeme()) ctx.addToken(getLiteralToken(ctx));
-                    ctx.addTrivia(ctx);
+                    ctx.putTrivia();
                     ctx.curState = INDENTATION;
                     calculateIndentation(ctx);
                 }
                 case " ", "\t", "\r" -> {
-
-                    if (ctx.isState(STRING) || ctx.isState(RUNE)) {
-                        ctx.addNext();
-                        break;
-                    }
-                    if (ctx.hasLexeme()) ctx.addToken(getLiteralToken(ctx));
-                    ctx.addTrivia(ctx);
+                    ctx.putTrivia();
                 }
                 case "=", "<", ">", ".", ",", ":", "-", "+", "*", "/", "%", "!", "~", "&", "|", "^", "[", "]", "(",
                      ")", "?" -> {
-                    if (ctx.isState(STRING) || ctx.isState(RUNE)) {
-                        ctx.addNext();
-                        break;
-                    }
-                    if (ctx.hasLexeme()) ctx.addToken(getLiteralToken(ctx));
-                    ctx.addNext();
-                    ctx.addToken(getSymbolToken(ctx));
+                    ctx.putNext();
+                    ctx.putToken(getSymbolToken(ctx));
                 }
                 case "'" -> {
                     if (ctx.isState(RUNE)) {
-                        ctx.addToken(getRuneLiteralToken(ctx));
+                        ctx.putToken(getRuneLiteralToken(ctx));
                         ctx.curState = DEFAULT;
                         break;
                     }
@@ -239,20 +284,27 @@ class Lexer implements syspro.tm.lexer.Lexer {
                 }
                 case "\"" -> {
                     if (ctx.isState(STRING)) {
-                        ctx.addToken(getStringLiteralToken(ctx));
+                        ctx.putToken(getStringLiteralToken(ctx));
                         ctx.curState = DEFAULT;
                         break;
                     }
                     ctx.curState = STRING;
                 }
-                default -> ctx.addNext();
+
+                default -> {
+                    if (isIdentifierStart(ctx.symbol())) {
+                        scanIdentifier(ctx);
+                        ctx.putToken(getLiteralToken(ctx));
+
+                    } else if (isDigit(ctx.symbol())) {
+                        scanNumber(ctx);
+                        ctx.putToken(getIntegerToken(ctx));
+                    }
+                    else ctx.putToken(null);
+                }
             }
         }
 
-        if (ctx.hasLexeme()) {
-            if (ctx.isState(COMMENTARY)) ctx.countLeadingTrivia += ctx.symbolBuffer.length();
-            else ctx.addToken(getLiteralToken(ctx));
-        }
         if (ctx.countLeadingTrivia != 0) {
             ctx.updateToken();
         }
@@ -260,6 +312,7 @@ class Lexer implements syspro.tm.lexer.Lexer {
         return ctx.tokens;
     }
 
+    int testCounter;
 
     @Override
     public List<Token> lex(String s) {

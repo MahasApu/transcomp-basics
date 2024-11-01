@@ -1,11 +1,11 @@
 package syspro.lexer;
 
+import syspro.lexer.utils.UtilMaps;
 import syspro.tm.lexer.*;
 
 import java.util.ArrayList;
 import java.util.Objects;
 
-import static java.util.Objects.nonNull;
 import static syspro.lexer.State.ObservedState.*;
 import static syspro.lexer.utils.UnicodeReader.codePointToString;
 import static syspro.lexer.utils.UnicodeReader.getUnicodePoints;
@@ -36,49 +36,72 @@ public class Context {
         this.codePoints = getUnicodePoints(source);
     }
 
+    void cancel() {
+        nextPos--;
+    }
+
+    String getSuffix() {
+        if (nextPos + 3 >= codePoints.length) return "";
+        return symbol(nextPos) + symbol(nextPos + 1) + symbol(nextPos + 2);
+    }
+
+    boolean hasSuffix() {
+        if (nextPos + 3 >= codePoints.length) return false;
+        String suffix = getSuffix();
+        return Objects.nonNull(UtilMaps.builtInTypeMap.get(suffix));
+    }
+
     public void resetBuffer() {
         symbolBuffer = new StringBuilder();
     }
 
-    public void addNext() {
-        symbolBuffer.append(nextSymbol());
+    public void putNext() {
+        symbolBuffer.append(symbol());
     }
 
     public boolean hasLexeme() {
         return !symbolBuffer.isEmpty();
     }
 
-    public String nextSymbol() {
+    public String symbol() {
         assert nextPos < codePoints.length;
         return codePointToString(codePoints[nextPos]);
     }
 
-    public String nextCodePoint(int pos) {
-        if (pos + 1 == codePoints.length) return null;
-        return codePointToString(codePoints[pos + 1]);
+    public String symbol(int pos) {
+        assert pos < codePoints.length;
+        return codePointToString(codePoints[pos]);
     }
 
-    public boolean nextIs(String s) {
-        return Objects.equals(nextCodePoint(nextPos), s);
+    public boolean isSymbol(String string) {
+        return Objects.equals(symbol(nextPos), string);
     }
 
-    void addToken(Token token) {
+    public boolean isNext(String string) {
+        return Objects.equals(symbol(nextPos + 1), string);
+    }
+
+
+    void putToken(Token token) {
         if (Objects.isNull(token)) {
-            tokens.add(new BadToken(start + countLeadingTrivia, end + countTrailingTrivia, countLeadingTrivia, countTrailingTrivia));
+            tokens.add(new BadToken(nextPos, nextPos, 0, 0));
+            curState = DEFAULT;
+            start = end = nextPos;
+            resetBuffer();
         } else {
             tokens.add(token);
-            symbolBuffer = new StringBuilder();
+            resetBuffer();
             start = end = nextPos;
         }
         if (curState.equals(INDENTATION)) return;
         countTrailingTrivia = countLeadingTrivia = 0;
     }
 
-    void addTrivia(Context ctx) {
-        if (!ctx.hasLexeme()) {
-            ctx.countLeadingTrivia++;
+    void putTrivia() {
+        if (!hasLexeme()) {
+            countLeadingTrivia++;
         } else {
-            ctx.countTrailingTrivia++;
+            countTrailingTrivia++;
         }
     }
 
@@ -93,7 +116,7 @@ public class Context {
     }
 
     boolean isEOF(int pos) {
-        return pos >= codePoints.length;
+        return !(pos < codePoints.length);
     }
 
     boolean isState(State.ObservedState state) {
@@ -106,7 +129,7 @@ public class Context {
 
     boolean isNewline(int pos) {
         assert pos < codePoints.length || pos + 1 < codePoints.length;
-        return codePoints[pos] == '\n' || (codePoints[pos-1] == '\r' && codePoints[pos] == '\n');
+        return codePoints[pos] == '\n' || (codePoints[pos - 1] == '\r' && codePoints[pos] == '\n');
 
     }
 
