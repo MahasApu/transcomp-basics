@@ -10,7 +10,7 @@ import static syspro.lexer.State.ObservedState.*;
 import static syspro.lexer.utils.UnicodeReader.codePointToString;
 import static syspro.lexer.utils.UnicodeReader.getUnicodePoints;
 
-public class Context {
+public class LexerContext {
 
     public int countLeadingTrivia;
     public int countTrailingTrivia;
@@ -29,7 +29,7 @@ public class Context {
     public State.ObservedState curState;
 
 
-    public Context(String source) {
+    public LexerContext(String source) {
         this.curState = DEFAULT;
         this.symbolBuffer = new StringBuilder();
         this.tokens = new ArrayList<Token>();

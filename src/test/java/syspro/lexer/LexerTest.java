@@ -220,10 +220,19 @@ class Indent1
 
     @Test
     void test9() {
-//        String strTest = "\n\n\n var x = €n  \n";
-        String strTest = "6997i32 ssasf<T>  var x = €\0i=8";
+        String strTest0 = "class Indent6\n" +
+                "  def memberIsAt2(): Boolean\n" +
+                "    return true\n" +
+                "    # The spaces in the following line are ignored for identation purposes,\n" +
+                "    # as per EOF rule\n";
+        String strTest1 = "class Bad1\n    val x = €\n";
+        String strTest2 = "class Bad1\n    val x = €      val";
+
         Lexer lexer = new Lexer();
-        lexer.lex(strTest).forEach(System.out::println);
+        for (Token t: lexer.lex(strTest2)) {
+            System.out.printf("%s    % d %d %d %d \n", t.toString(), t.leadingTriviaLength, t.start + t.leadingTriviaLength, t.end - t.trailingTriviaLength, t.trailingTriviaLength);
+        }
+//        lexer.lex(strTest).forEach(System.out::println);
     }
 
 

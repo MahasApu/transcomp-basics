@@ -9,10 +9,10 @@ import static syspro.lexer.utils.UnicodePattern.*;
 import static syspro.lexer.utils.UtilMaps.*;
 
 
-class Lexer implements syspro.tm.lexer.Lexer {
+public class Lexer implements syspro.tm.lexer.Lexer {
 
 
-    private int countIndentationLength(Context ctx, int pos) {
+    private int countIndentationLength(LexerContext ctx, int pos) {
         int count = 0;
         while (!ctx.isEOF(pos) && (ctx.codePoints[pos] == ' ' || ctx.codePoints[pos] == '\t')) {
             count += ctx.codePoints[pos] == '\t' ? 2 : 1;
@@ -21,17 +21,17 @@ class Lexer implements syspro.tm.lexer.Lexer {
         return count;
     }
 
-    private void updateIndentationLevel(Context ctx, int level) {
+    private void updateIndentationLevel(LexerContext ctx, int level) {
         ctx.prevIndentationLevel = ctx.curIndentationLevel;
         ctx.curIndentationLevel = level;
     }
 
-    private void incrementIndentationLevel(Context ctx) {
+    private void incrementIndentationLevel(LexerContext ctx) {
         ctx.prevIndentationLevel = ctx.curIndentationLevel;
         ctx.curIndentationLevel++;
     }
 
-    private void calculateIndentation(Context ctx) {
+    private void calculateIndentation(LexerContext ctx) {
         if (ctx.isEOF(ctx.nextPos + 1)) {
             updateIndentationLevel(ctx, 0);
             resetIndentation(ctx);
@@ -61,7 +61,7 @@ class Lexer implements syspro.tm.lexer.Lexer {
     }
 
 
-    private void resetIndentation(Context ctx) {
+    private void resetIndentation(LexerContext ctx) {
         int difference = ctx.curIndentationLevel - ctx.prevIndentationLevel;
         if (difference == 0) return;
         int sign = difference > 0 ? 1 : -1;
@@ -71,14 +71,14 @@ class Lexer implements syspro.tm.lexer.Lexer {
         }
     }
 
-    void resetIndentationAtTheEnd(Context ctx) {
+    void resetIndentationAtTheEnd(LexerContext ctx) {
         if (ctx.curIndentationLevel != 0) {
             updateIndentationLevel(ctx, 0);
             resetIndentation(ctx);
         }
     }
 
-    private SymbolToken getSymbolToken(Context ctx) {
+    private SymbolToken getSymbolToken(LexerContext ctx) {
         ctx.curState = SYMBOL;
         String lexeme = ctx.symbolBuffer.toString();
         ctx.start = ctx.end = ctx.nextPos;
@@ -113,7 +113,7 @@ class Lexer implements syspro.tm.lexer.Lexer {
 
     }
 
-    void scanIdentifier(Context ctx) {
+    void scanIdentifier(LexerContext ctx) {
         ctx.putNext();
         ctx.nextPos++;
 
@@ -139,7 +139,7 @@ class Lexer implements syspro.tm.lexer.Lexer {
     }
 
 
-    public Token getLiteralToken(Context ctx) {
+    public Token getLiteralToken(LexerContext ctx) {
         ctx.end = ctx.nextPos;
         ctx.start = ctx.nextPos - ctx.bufferLen() + 1;
 
@@ -173,7 +173,7 @@ class Lexer implements syspro.tm.lexer.Lexer {
     }
 
 
-    void scanNumber(Context ctx) {
+    void scanNumber(LexerContext ctx) {
         ctx.putNext();
         ctx.nextPos++;
 
@@ -195,7 +195,7 @@ class Lexer implements syspro.tm.lexer.Lexer {
     }
 
 
-    Token getIntegerToken(Context ctx) {
+    Token getIntegerToken(LexerContext ctx) {
         ctx.end = ctx.nextPos;
         ctx.start = ctx.nextPos - ctx.bufferLen() + 1;
 
@@ -224,7 +224,7 @@ class Lexer implements syspro.tm.lexer.Lexer {
     }
 
 
-    private Token getStringLiteralToken(Context ctx) {
+    private Token getStringLiteralToken(LexerContext ctx) {
         ctx.end = ctx.nextPos;
         ctx.start = ctx.nextPos - ctx.bufferLen() - 1;
         return new StringLiteralToken(ctx.start - ctx.countLeadingTrivia, ctx.end + ctx.countTrailingTrivia,
@@ -232,7 +232,7 @@ class Lexer implements syspro.tm.lexer.Lexer {
     }
 
 
-    private Token getRuneLiteralToken(Context ctx) {
+    private Token getRuneLiteralToken(LexerContext ctx) {
         ctx.end = ctx.nextPos;
         ctx.start = ctx.nextPos - ctx.bufferLen() - 1;
         String rune = ctx.symbolBuffer.toString();
@@ -243,7 +243,7 @@ class Lexer implements syspro.tm.lexer.Lexer {
     }
 
 
-    public List<Token> tokenize(Context ctx) {
+    public List<Token> tokenize(LexerContext ctx) {
         while (!ctx.isEOF(++ctx.nextPos)) {
             String nextSymbol = ctx.symbol();
 
@@ -314,7 +314,7 @@ class Lexer implements syspro.tm.lexer.Lexer {
 
     @Override
     public List<Token> lex(String s) {
-        Context ctx = new Context(s);
+        LexerContext ctx = new LexerContext(s);
         return tokenize(ctx);
     }
 }
