@@ -84,7 +84,8 @@ public class LexerContext {
 
     void putToken(Token token) {
         if (Objects.isNull(token)) {
-            tokens.add(new BadToken(nextPos - countLeadingTrivia, nextPos + countTrailingTrivia, countLeadingTrivia, countTrailingTrivia));
+            BadToken badToken = new BadToken(nextPos - countLeadingTrivia, nextPos + countTrailingTrivia, countLeadingTrivia, countTrailingTrivia);
+            tokens.add(badToken);
             curState = DEFAULT;
             resetBuffer();
         } else {

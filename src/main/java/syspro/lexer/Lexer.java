@@ -299,8 +299,7 @@ public class Lexer implements syspro.tm.lexer.Lexer {
                     } else if (isDigit(ctx.symbol())) {
                         scanNumber(ctx);
                         ctx.putToken(getIntegerToken(ctx));
-                    }
-                    else ctx.putToken(null);
+                    } else ctx.putToken(null);
                 }
             }
         }
