@@ -74,7 +74,7 @@ public class Logger {
 
         String tokenInfo = String.format("Node: %s\n",
                 node.toString());
-        log(LogLevel.INFO, this.stage, message + tokenInfo);
+        log(LogLevel.INFO, this.stage, message.trim().indent(1) + tokenInfo);
 
     }
 
