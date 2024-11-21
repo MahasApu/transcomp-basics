@@ -1,0 +1,7 @@
+
+-------------LEXICAL----------
+--INFO --LEXICAL   Token added - continue             0     <0 7>      0         
+
+-------------SYNTAX----------
+--INFO --SYNTAX    start parsing
+Node: CONTINUE

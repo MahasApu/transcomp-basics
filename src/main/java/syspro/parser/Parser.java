@@ -14,7 +14,6 @@ import syspro.utils.Logger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 import static syspro.tm.lexer.Keyword.*;
 import static syspro.tm.lexer.Symbol.*;
@@ -171,11 +170,6 @@ public class Parser implements syspro.tm.parser.Parser {
         return null;
     }
 
-
-    private SyntaxNode assignment(ParserContext ctx) {
-        return null;
-    }
-
     @FunctionalInterface
     public interface ParserMethod<T> {
         T parse(ParserContext ctx);
@@ -190,17 +184,63 @@ public class Parser implements syspro.tm.parser.Parser {
     }
 
 
+    private SyntaxNode parsePrimary(ParserContext ctx) {
+        List<SyntaxNode> extensions = new ArrayList<>();
+        SyntaxNode primary = parseAtom(ctx);
+        while (true) {
+            if (ctx.is(DOT)) {
+                Token name = ctx.expected("Expected Identifier", IDENTIFIER);
+                extensions.add(new Statement(MEMBER_ACCESS_EXPRESSION));
+            } else if (ctx.is(OPEN_PAREN)) {
+                List<SyntaxNode> args = parseSeparatedList(this::parseExpression, COMMA, ctx);
+                ctx.expected("Expected ) in primary", CLOSE_PAREN);
+                extensions.add(new Statement(INVOCATION_EXPRESSION));
+            } else if (ctx.is(OPEN_BRACKET)) {
+                SyntaxNode expr = parseExpression(ctx);
+                ctx.expected("Expected } in primary", CLOSE_BRACKET);
+                extensions.add(new Statement(INDEX_EXPRESSION));
+            }
+        }
+
+    }
+
+    private SyntaxNode parseAtom(ParserContext ctx) {
+        return switch (ctx.kind()) {
+            case IDENTIFIER -> new Statement(IDENTIFIER_NAME_EXPRESSION);
+            case THIS -> new Statement(THIS_EXPRESSION);
+            case SUPER -> new Statement(SUPER_EXPRESSION);
+            case NULL -> new Statement(NULL_LITERAL_EXPRESSION);
+            case STRING -> new Statement(STRING_LITERAL_EXPRESSION);
+            case RUNE -> new Statement(RUNE_LITERAL_EXPRESSION);
+            case INTEGER -> new Statement(INTEGER_LITERAL_EXPRESSION);
+            case BOOLEAN -> {
+                if (ctx.get().toString().equals("true")) yield new Statement(TRUE_LITERAL_EXPRESSION);
+                yield new Statement(FALSE_LITERAL_EXPRESSION);
+            }
+            case OPEN_PAREN -> {
+                ctx.expected("Expected ( in atom", OPEN_PAREN);
+                SyntaxNode expr = parseExpression(ctx);
+                ctx.expected("Expected ) in atom", CLOSE_PAREN);
+                yield new Statement(PARENTHESIZED_EXPRESSION);
+            }
+            default -> throw new IllegalStateException("Unexpected value: " + ctx.kind());
+        };
+    }
+
+
     private SyntaxNode parseStatement(ParserContext ctx) {
         return switch (ctx.kind()) {
-            case IF_STATEMENT -> parseIfStatement(ctx);
-            case ASSIGNMENT_STATEMENT -> assignStatement(ctx);
-            case BREAK_STATEMENT -> breakStatement(ctx);
-            case CONTINUE_STATEMENT -> continueStatement(ctx);
-            case FOR_STATEMENT -> forStatement(ctx);
-            case EXPRESSION_STATEMENT -> exprStatement(ctx);
-            case RETURN_STATEMENT -> returnStatement(ctx);
-            case VARIABLE_DEFINITION_STATEMENT -> parseVarDefStatement(ctx);
-            case WHILE_STATEMENT -> parseWhileStatement(ctx);
+            case VAR, VAL -> parseVarDefStatement(ctx);
+            case IDENTIFIER -> {
+                if (ctx.look().toSyntaxKind().equals(EQUALS)) yield parseAssignStatement(ctx);
+                yield parseExpressionStatement(ctx);
+            }
+            case RETURN -> parseReturnStatement(ctx);
+            case BREAK -> parseBreakStatement(ctx);
+            case CONTINUE -> parseContinueStatement(ctx);
+            case IF -> parseIfStatement(ctx);
+            case WHILE -> parseWhileStatement(ctx);
+            case FOR -> parseForStatement(ctx);
             default -> parseExpressionStatement(ctx);
         };
     }
@@ -216,18 +256,20 @@ public class Parser implements syspro.tm.parser.Parser {
     }
 
     private SyntaxNode parseIfStatement(ParserContext ctx) {
+        ctx.match(IF);
         SyntaxNode cond = parseExpression(ctx);
         ctx.match(INDENT);
-        List<Statement> trueStatements = parseStatementList(ctx);
-        List<Statement> falseStatements = new ArrayList<>();
+//        List<Statement> trueStatements = parseStatementList(ctx);
+        List<Statement> elseStatements = new ArrayList<>();
         if (ctx.match(ELSE)) {
             ctx.match(INDENT);
-            falseStatements = parseStatementList(ctx);
+            elseStatements = parseStatementList(ctx);
         }
         return new Statement(IF_STATEMENT);
     }
 
     private SyntaxNode parseWhileStatement(ParserContext ctx) {
+        ctx.match(WHILE);
         SyntaxNode cond = parseExpression(ctx);
         ctx.match(INDENT);
         List<Statement> statements = parseStatementList(ctx);
@@ -235,36 +277,37 @@ public class Parser implements syspro.tm.parser.Parser {
     }
 
     private SyntaxNode parseVarDefStatement(ParserContext ctx) {
-        String name = ctx.match(IDENTIFIER) ? ctx.prev().toString() : null;
-        if (ctx.match(COLON)) {
-            SyntaxNode expr = parseExpression(ctx);
-            return new Statement(VARIABLE_DEFINITION_STATEMENT);
+        return parseVarDeclaration(ctx);
+    }
+
+
+    private SyntaxNode parseContinueStatement(ParserContext ctx) {
+        ctx.expected("Expected continue in statement.", CONTINUE);
+        return new Statement(CONTINUE_STATEMENT);
+    }
+
+    private SyntaxNode parseBreakStatement(ParserContext ctx) {
+        ctx.expected("Expected break in statement.", BREAK);
+        return new Statement(BREAK_STATEMENT);
+    }
+
+    private SyntaxNode parseAssignStatement(ParserContext ctx) {
+        SyntaxNode primary = parsePrimary(ctx);
+        ctx.expected("Expected = in assignment.", EQUALS);
+        SyntaxNode expr = parseExpression(ctx);
+        return new Statement(ASSIGNMENT_STATEMENT);
+    }
+
+    private SyntaxNode parseForStatement(ParserContext ctx) {
+        ctx.match(FOR);
+        SyntaxNode primary = parsePrimary(ctx);
+        ctx.expected("Expected IN in assignment.", IN);
+        SyntaxNode expr = parseExpression(ctx);
+        List<Statement> statements = null;
+        if (ctx.match(INDENT)) {
+            statements = parseStatementList(ctx);
+            ctx.expected("Expected DEDENT in assignment.", DEDENT);
         }
-        return null;
-    }
-
-    private SyntaxNode exprStatement(ParserContext ctx) {
-        return null;
-    }
-
-    private SyntaxNode continueStatement(ParserContext ctx) {
-        return ctx.match(CONTINUE) ? new Statement(CONTINUE_STATEMENT) : null;
-    }
-
-    private SyntaxNode breakStatement(ParserContext ctx) {
-        return ctx.match(BREAK) ? new Statement(BREAK_STATEMENT) : null;
-    }
-
-    private SyntaxNode assignStatement(ParserContext ctx) {
-        return null;
-    }
-
-    private SyntaxNode forStatement(ParserContext ctx) {
-        SyntaxNode start = parseExpression(ctx);
-        ctx.match(IN);
-        SyntaxNode end = parseExpression(ctx);
-        ctx.match(INDENT);
-        List<Statement> statements = parseStatementList(ctx);
         return new Statement(FOR_STATEMENT);
 
     }
@@ -273,10 +316,40 @@ public class Parser implements syspro.tm.parser.Parser {
         return null;
     }
 
-    private SyntaxNode returnStatement(ParserContext ctx) {
-        SyntaxNode expr = ctx.match(SyntaxCategory.EXPRESSION) ? parseExpression(ctx) : null;
-        assert expr != null;
-        return new Statement(expr.kind());
+    private SyntaxNode parseReturnStatement(ParserContext ctx) {
+        ctx.expected("Expected return in statement.", RETURN);
+        SyntaxNode expr = null;
+        if (ctx.is(DEDENT)) {
+            expr = parseExpression(ctx);
+        }
+        return new Statement(RETURN_STATEMENT);
+    }
+
+
+    private SyntaxNode parseUnaryExpression(ParserContext ctx) {
+        return switch (ctx.kind()) {
+            case EXCLAMATION -> {
+                ctx.match(EXCLAMATION);
+                SyntaxNode expr = parseUnaryExpression(ctx);
+                yield new Expression(LOGICAL_NOT_EXPRESSION);
+            }
+            case PLUS -> {
+                ctx.match(PLUS);
+                SyntaxNode expr = parseUnaryExpression(ctx);
+                yield new Expression(UNARY_PLUS_EXPRESSION);
+            }
+            case MINUS -> {
+                ctx.match(MINUS);
+                SyntaxNode expr = parseUnaryExpression(ctx);
+                yield new Expression(UNARY_MINUS_EXPRESSION);
+            }
+            case TILDE -> {
+                ctx.match(TILDE);
+                SyntaxNode expr = parseUnaryExpression(ctx);
+                yield new Expression(BITWISE_NOT_EXPRESSION);
+            }
+            default -> parsePrimary(ctx);
+        };
     }
 
 
