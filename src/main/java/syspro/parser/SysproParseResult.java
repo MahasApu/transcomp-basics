@@ -14,6 +14,12 @@ public class SysproParseResult implements ParseResult {
     public Collection<TextSpan> invalidRanges;
     Collection<Diagnostic> diagnostics;
 
+    SysproParseResult(SyntaxNode root, Collection<TextSpan> invalidRanges, Collection<Diagnostic> diagnostics) {
+        this.root = root;
+        this.invalidRanges = invalidRanges;
+        this.diagnostics = diagnostics;
+    }
+
     @Override
     public SyntaxNode root() {
         return null;

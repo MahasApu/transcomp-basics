@@ -1,7 +1,7 @@
 package syspro.parser;
 
+import syspro.parser.ast.ASTNode;
 import syspro.parser.ast.SyntaxCategory;
-import syspro.parser.exceptions.ParserException;
 import syspro.tm.lexer.Keyword;
 import syspro.tm.lexer.Symbol;
 import syspro.tm.lexer.Token;
@@ -10,10 +10,13 @@ import syspro.tm.parser.SyntaxKind;
 import syspro.utils.Logger;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import static syspro.tm.parser.SyntaxKind.*;
 import static syspro.tm.lexer.Keyword.*;
 import static syspro.tm.lexer.Symbol.*;
+import static syspro.tm.parser.SyntaxKind.*;
 
 public class ParserContext {
 
@@ -22,6 +25,30 @@ public class ParserContext {
     public SysproParseResult result;
     public List<Token> tokens;
     public int pos = -1;
+
+    private static Map<AnySyntaxKind, Integer> precedence = Stream.of(new Object[][]{
+            {PLUS, 1},
+            {MINUS, 1},
+            {TILDE, 1},
+            {ASTERISK, 2},
+            {SLASH, 2},
+            {PERCENT, 2},
+            {LESS_THAN_LESS_THAN, 4},
+            {GREATER_THAN_GREATER_THAN, 4},
+            {AMPERSAND, 5},
+            {CARET, 6},
+            {BAR, 7},
+            {EQUALS_EQUALS, 8},
+            {EXCLAMATION_EQUALS, 8},
+            {LESS_THAN, 8},
+            {LESS_THAN_EQUALS, 8},
+            {GREATER_THAN, 8},
+            {GREATER_THAN_EQUALS, 8},
+            {IS, 8},
+            {EXCLAMATION, 9},
+            {AMPERSAND_AMPERSAND, 10},
+            {BAR_BAR, 11}
+    }).collect(Collectors.toMap(data -> (AnySyntaxKind) data[0], data -> (Integer) data[1]));
 
 
     public boolean isEOF() {
@@ -33,9 +60,12 @@ public class ParserContext {
         this.tokens = tokens;
     }
 
-    public boolean is(AnySyntaxKind kind) {
+    public boolean is(AnySyntaxKind... kind) {
         if (isEOF()) return false;
-        return tokens.get(pos).toSyntaxKind().equals(kind);
+        for (AnySyntaxKind k : kind) {
+            if (tokens.get(pos).toSyntaxKind().equals(k)) return true;
+        }
+        return false;
     }
 
     public AnySyntaxKind kind() {
@@ -45,7 +75,7 @@ public class ParserContext {
 
     public boolean match(AnySyntaxKind... kinds) {
         for (AnySyntaxKind kind : kinds) {
-            if (is(kind)) {
+            if (is(kind) || (kind instanceof SyntaxCategory && isCategory((SyntaxCategory) kind))) {
                 step();
                 return true;
             }
@@ -73,17 +103,17 @@ public class ParserContext {
     }
 
 
-    public Token expected(String msg, AnySyntaxKind... kinds) {
+    public ASTNode expected(String msg, AnySyntaxKind... kinds) {
         for (AnySyntaxKind kind : kinds) {
             if (kind instanceof SyntaxCategory && isCategory((SyntaxCategory) kind)) {
-                return step();
+                return new ASTNode(kind, step());
             }
             if (is(kind)) {
-                return step();
+                return new ASTNode(kind, step());
             }
         }
         logger.log(Logger.LogLevel.ERROR, Logger.Stage.SYNTAX, msg);
-        throw new ParserException(); //
+        return null; //
     }
 
     public boolean isCategory(SyntaxCategory category) {
@@ -155,4 +185,11 @@ public class ParserContext {
         };
     }
 
+    public Map<AnySyntaxKind, Integer> getPrecedence() {
+        return precedence;
+    }
+
+    public void setPrecedence(Map<AnySyntaxKind, Integer> precedence) {
+        this.precedence = precedence;
+    }
 }

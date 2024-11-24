@@ -236,7 +236,35 @@ class LexerTest {
 
     @Test
     void continueTest() throws IOException {
-        String strTest = "continue";
+        String strTest = """
+                
+class Indent7
+  def memberIsAt2(): Boolean
+    return true
+    if true""";
+
+        Parser parser = new Parser();
+        parser.parse(strTest);
+    }
+
+
+    @Test
+    void varValTest() throws IOException {
+        String strTest = "val x = 10";
+
+        Parser parser = new Parser();
+        parser.parse(strTest);
+    }
+
+    @Test
+    void defTest() throws IOException {
+        String strTest =
+                """
+                        class MyClass\n
+                          def memberIsAt2(): Boolean
+                            var x = 10\n
+                            return true
+                        """;
 
         Parser parser = new Parser();
         parser.parse(strTest);
@@ -244,4 +272,17 @@ class LexerTest {
 
 
 
+    @Test
+    void objectGenericsTest() throws IOException {
+        String strTest ="""
+class Object
+object PrimitiveIntrinsics<T>
+    native def default(): T # Available for all primitive or nullable types
+    # The following are valid only for numeric T
+    native def one(): T
+""";
+
+        Parser parser = new Parser();
+        parser.parse(strTest);
+    }
 }

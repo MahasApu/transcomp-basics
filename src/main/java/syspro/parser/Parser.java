@@ -1,14 +1,10 @@
 package syspro.parser;
 
 import syspro.lexer.Lexer;
-import syspro.parser.ast.Expression;
-import syspro.parser.ast.Statement;
-import syspro.parser.ast.SyntaxCategory;
-import syspro.parser.exceptions.ParserException;
+import syspro.parser.ast.ASTNode;
 import syspro.tm.lexer.Token;
 import syspro.tm.parser.AnySyntaxKind;
 import syspro.tm.parser.ParseResult;
-import syspro.tm.parser.SyntaxNode;
 import syspro.utils.Logger;
 
 import java.util.ArrayList;
@@ -21,82 +17,110 @@ import static syspro.tm.parser.SyntaxKind.*;
 
 public class Parser implements syspro.tm.parser.Parser {
 
-    public List<SyntaxNode> parse(ParserContext ctx) {
-        List<SyntaxNode> statements = new ArrayList<>();
+    public List<ASTNode> parse(ParserContext ctx) {
+        List<ASTNode> statements = new ArrayList<>();
+
         while (++ctx.pos < ctx.tokens.size()) {
-            ctx.logger.info(ctx.kind(), "start parsing");
-            statements.add(parseDeclaration(ctx));
+            ctx.logger.info(ctx.kind(), String.format("start parsing - %s", ctx.get().toString()));
+            ASTNode statement = parseDefinition(ctx);
+            if (Objects.isNull(statement)) ctx.logger.info(NULL, "final result - ");
+            else ctx.logger.info(statement, "final result  - ");
+
+            statements.add(statement);
         }
         return statements;
     }
 
-    private SyntaxNode parseDeclaration(ParserContext ctx) {
-        try {
-            if (ctx.match(CLASS)) return parseClassDeclaration(ctx);
-            if (ctx.match(DEF)) return parseDefDeclaration(ctx);
-            if (ctx.match(VAL)) return parseVarDeclaration(ctx);
-            if (ctx.match(VAR)) return parseVarDeclaration(ctx);
-            return parseStatement(ctx);
-        } catch (ParserException e) {
-            // do smth
-            return null;
-        }
+    private ASTNode parseDefinition(ParserContext ctx) {
+        if (ctx.is(CLASS, OBJECT, INTERFACE)) return parseClassDefinition(ctx);
+        if (ctx.is(VAL, VAR)) return parseVarDefinition(ctx);
+        if (ctx.is(ABSTRACT, VIRTUAL, OVERRIDE, NATIVE, DEF)) return parseDefDefinition(ctx);
+        if (ctx.get().toString().equals("class") || ctx.get().toString().equals("object")
+                || ctx.get().toString().equals("interface")) return parseClassDefinition(ctx);
+        if (ctx.is(IDENTIFIER)) return parseClassDefinition(ctx);
+        return parseStatement(ctx);
     }
 
-    private SyntaxNode parseVarDeclaration(ParserContext ctx) {
-        Token keyword = ctx.expected("Expected any of VAR|VAL in var decl.", VAR, VAL);
-        Token name = ctx.expected("Expected name in var decl.", IDENTIFIER);
+    private ASTNode parseVarDefinition(ParserContext ctx) {
+        ASTNode keyword = ctx.expected("Expected any of VAR|VAL in var decl.", VAR, VAL);
+        ASTNode name = ctx.expected("Expected name in var decl.", IDENTIFIER);
 
-        SyntaxNode typeExpr = null;
-        if (ctx.match(COLON)) typeExpr = parseNameExpression(ctx);
-
-        SyntaxNode valueExpr = null;
-        if (ctx.match(EQUALS)) valueExpr = parseExpression(ctx);
-        return new Statement(VARIABLE_DEFINITION_STATEMENT);
-    }
-
-    private SyntaxNode parseDefDeclaration(ParserContext ctx) {
-        List<SyntaxNode> terminalList = parseTerminalList(ctx);
-        ctx.expected("Expected DEF keyword in func def.", DEF);
-
-        Token functionName = ctx.expected("Expected function name in func def.", IDENTIFIER);
-
-        ctx.expected("Expected ( for func def.", OPEN_PAREN);
-        List<SyntaxNode> parameterList = parseParameterDefinitionList(ctx);
-        ctx.expected("Expected ) for func def.", CLOSE_PAREN);
-
-        SyntaxNode returnType = null;
-        if (ctx.match(COLON)) returnType = parseNameExpression(ctx);
-
-        if (ctx.match(INDENT)) {
-            List<Statement> functionBody = parseStatementList(ctx);
-            ctx.expected("Expected DEDENT in func def.", DEDENT);
+        ASTNode typeExpr = null;
+        ASTNode colon = null;
+        if (ctx.is(COLON)) {
+            colon = ctx.expected("Expected : in var decl.", COLON);
+            typeExpr = parseNameExpression(ctx);
         }
 
-        return new Statement(FUNCTION_DEFINITION);
+        ASTNode valueExpr = null;
+        ASTNode eq = null;
+        if (ctx.is(EQUALS)) {
+            eq = ctx.expected("Expected = in var decl.", EQUALS);
+            valueExpr = parseExpression(ctx);
+        }
+        ASTNode node = new ASTNode(VARIABLE_DEFINITION_STATEMENT, null, keyword, name, colon, typeExpr, eq, valueExpr);
+        ctx.logger.info(node, "Variable_def_stmt node -");
+        return node;
     }
 
-    private SyntaxNode parseNameExpression(ParserContext ctx) {
+    private ASTNode parseDefDefinition(ParserContext ctx) {
+        ASTNode terminalList = parseTerminalList(ctx, ABSTRACT, VIRTUAL, OVERRIDE, NATIVE);
+        ASTNode def = ctx.expected("Expected DEF keyword in func def.", DEF);
+
+        ASTNode functionName = ctx.expected("Expected function name in func def.", IDENTIFIER);
+
+        ASTNode openParen = ctx.expected("Expected ( for func def.", OPEN_PAREN);
+        ASTNode parameterList = parseSeparatedList(this::parseParameterDefinition, COMMA, ctx);
+        ASTNode closeParen = ctx.expected("Expected ) for func def.", CLOSE_PAREN);
+
+        ASTNode returnType = null;
+        ASTNode colon = null;
+        if (ctx.match(COLON)) {
+            colon = new ASTNode(COLON, ctx.prev());
+            returnType = parsePrimary(ctx);
+        }
+
+        ASTNode functionBody = null;
+        ASTNode indent = null;
+        ASTNode dedent = null;
+        if (ctx.is(INDENT)) {
+            indent = ctx.expected("Expected INDENT in func def.", INDENT);
+            functionBody = new ASTNode(LIST, null, parseStatementList(ctx));
+            dedent = ctx.expected("Expected DEDENT in func def.", DEDENT);
+        }
+        ASTNode node = new ASTNode(FUNCTION_DEFINITION, null, terminalList, def,
+                functionName, openParen, parameterList, closeParen,
+                colon, returnType, indent, functionBody, dedent);
+
+        ctx.logger.info(node, "Function definition -");
+        return node;
+    }
+
+    private ASTNode parseNameExpression(ParserContext ctx) {
         if (ctx.match(QUESTION)) {
-            SyntaxNode innerExpr = parseNameExpression(ctx);
-            return new Expression(OPTION_NAME_EXPRESSION);
+            ASTNode question = new ASTNode(QUESTION, ctx.prev());
+            ASTNode innerExpr = parseNameExpression(ctx);
+            return new ASTNode(OPTION_NAME_EXPRESSION, ctx.get(), question, innerExpr);
         }
 
-        Token name = ctx.expected("Expected name in name expr.", IDENTIFIER);
+        ASTNode name = ctx.expected("Expected name in name expr.", IDENTIFIER);
 
-        List<SyntaxNode> typeArguments = null;
+        ASTNode typeArguments = null;
+        ASTNode lessThan = null;
+        ASTNode greaterThen = null;
         if (ctx.match(LESS_THAN)) {
+            lessThan = new ASTNode(LESS_THAN, ctx.prev());
             typeArguments = parseSeparatedList(this::parseNameExpression, COMMA, ctx);
-            ctx.expected("Expected > in name expr.", GREATER_THAN);
+            greaterThen = ctx.expected("Expected > in name expr.", GREATER_THAN);
         }
 
-        if (Objects.nonNull(typeArguments) && !typeArguments.isEmpty())
-            return new Expression(GENERIC_NAME_EXPRESSION);
-        return new Expression(IDENTIFIER_NAME_EXPRESSION);
+        if (Objects.nonNull(typeArguments) && typeArguments.slotCount() != 0)
+            return new ASTNode(GENERIC_NAME_EXPRESSION, null, name, lessThan, typeArguments, greaterThen);
+        return new ASTNode(IDENTIFIER_NAME_EXPRESSION, null, name);
     }
 
-    private List<SyntaxNode> parseParameterDefinitionList(ParserContext ctx) {
-        List<SyntaxNode> parameterList = new ArrayList<>();
+    private List<ASTNode> parseParameterDefinitionList(ParserContext ctx) {
+        List<ASTNode> parameterList = new ArrayList<>();
         while (true) {
             if (ctx.match(IDENTIFIER)) {
                 parameterList.add(parseParameterDefinition(ctx));
@@ -105,69 +129,86 @@ public class Parser implements syspro.tm.parser.Parser {
         return parameterList;
     }
 
-    private SyntaxNode parseParameterDefinition(ParserContext ctx) {
-        Token identifier = ctx.expected("Expected name in param def", IDENTIFIER);
-        ctx.expected("Expected COLON in param def", COLON);
-        SyntaxNode name = parseNameExpression(ctx);
-        return new Statement(PARAMETER_DEFINITION);
+    private ASTNode parseParameterDefinition(ParserContext ctx) {
+        if (ctx.is(CLOSE_PAREN)) return new ASTNode(PARAMETER_DEFINITION, null, null, null, null);
+        ASTNode identifier = ctx.expected("Expected name in param def", IDENTIFIER);
+        ASTNode colon = ctx.expected("Expected COLON in param def", COLON);
+        ASTNode name = parseNameExpression(ctx);
+        return new ASTNode(PARAMETER_DEFINITION, null, identifier, colon, name);
     }
 
-    private List<SyntaxNode> parseTerminalList(ParserContext ctx) {
-        List<SyntaxNode> terminalList = new ArrayList<>();
-        while (ctx.match(SyntaxCategory.TERMINAL)) {
-            terminalList.add(new Statement(ctx.look().toSyntaxKind()));
+    private ASTNode parseTerminalList(ParserContext ctx, AnySyntaxKind... terms) {
+        List<ASTNode> terminalList = new ArrayList<>();
+        while (ctx.match(terms)) {
+            terminalList.add(new ASTNode(ctx.look().toSyntaxKind(), ctx.get()));
         }
-        return terminalList;
+        return new ASTNode(LIST, null, terminalList);
     }
 
-    private SyntaxNode parseClassDeclaration(ParserContext ctx) {
-        Token name = ctx.expected("Expect class name.", IDENTIFIER);
-        ctx.expected("Expected <", LESS_THAN);
+    private ASTNode parseClassDefinition(ParserContext ctx) {
+        AnySyntaxKind kind = switch (ctx.get().toString()) {
+            case "class" -> CLASS;
+            case "object" -> OBJECT;
+            case "interface" -> INTERFACE;
+            default -> NULL;
+        };
+        ASTNode keyword = new ASTNode(kind, ctx.get());
+        ctx.match(IDENTIFIER);
+        ASTNode name = ctx.expected("Expected name in class decl", IDENTIFIER);
 
+        ASTNode lessThan = null;
+        ASTNode greaterThan = null;
+        ASTNode generics = null;
         if (ctx.match(LESS_THAN)) {
-            List<SyntaxNode> generics = new ArrayList<>();
-            while (!ctx.match(GREATER_THAN)) generics.add(new Expression(GENERIC_NAME_EXPRESSION));
-        }
-        ctx.expected("Expected > ", GREATER_THAN);
-
-        return new Statement(TYPE_DEFINITION);
-    }
-
-
-    private SyntaxNode parseTypeDefinition(ParserContext ctx) {
-        Token name = ctx.expected("Expected name in type def.", IDENTIFIER);
-
-        List<SyntaxNode> typeParameters = null;
-        if (ctx.match(LESS_THAN)) {
-            typeParameters = parseSeparatedList(this::parseTypeParameterDefinition, COMMA, ctx);
-            ctx.expected("Expected > in type def.", GREATER_THAN);
+            lessThan = new ASTNode(LESS_THAN, ctx.prev());
+            generics = parseSeparatedList(this::parseTypeParameterDefinition, COMMA, ctx);
+            greaterThan = ctx.expected("Expected > ", GREATER_THAN);
         }
 
-        // type_bound := '<:' type_name ('&' type_name)*
-        List<SyntaxNode> typeBoundsList = null;
+        ASTNode typeBoundsList = null;
+        ASTNode bound = null;
         if (ctx.match(BOUND)) {
-            typeBoundsList = parseTypeBound(ctx);
+            bound = new ASTNode(BOUND, ctx.prev());
+            typeBoundsList = parseSeparatedList(this::parseTypeParameterDefinition, COMMA, ctx);
         }
 
-        // TODO: inner definitions
-        List<SyntaxNode> innerDefinitions = null;
+        ASTNode indent = null;
+        ASTNode memberDef = null;
+        ASTNode dedent = null;
         if (ctx.match(INDENT)) {
-            // innerDefinitions = parseList(this::aaaa, ctx);
-            ctx.expected("Expected DEDENT in type def", DEDENT);
+            indent = new ASTNode(INDENT, ctx.prev());
+            memberDef = parseVarDefDefinitionList(ctx);
+            ctx.logger.info(memberDef, "Memberblock of class - ");
+            dedent = ctx.expected("Expected DEDENT", DEDENT);
+
         }
-        return new Expression(TYPE_DEFINITION);
-
-
+        ctx.pos--;
+        return new ASTNode(TYPE_DEFINITION, null, keyword, name, lessThan,
+                generics, greaterThan, bound, typeBoundsList, indent, memberDef, dedent);
     }
 
-    private SyntaxNode parseTypeParameterDefinition(ParserContext ctx) {
-        return null;
+    private ASTNode parseVarDefDefinitionList(ParserContext ctx) {
+        List<ASTNode> list = new ArrayList<>();
+        while (!ctx.is(DEDENT)) {
+            if (ctx.is(VAL, VAR)) list.add(parseVarDefinition(ctx));
+            if (ctx.is(ABSTRACT, VIRTUAL, OVERRIDE, NATIVE, DEF)) list.add(parseDefDefinition(ctx));
+            else break;
+        }
+        return new ASTNode(LIST, null, list);
     }
 
-    private List<SyntaxNode> parseTypeBound(ParserContext ctx) {
-        List<SyntaxNode> types = new ArrayList<>();
-        types.add(parseNameExpression(ctx));
-        return null;
+
+    private ASTNode parseTypeParameterDefinition(ParserContext ctx) {
+        ASTNode identifier = ctx.expected("Expected identifier in type param.", IDENTIFIER);
+        ASTNode typeBound = null;
+        if (ctx.is(BOUND)) typeBound = parseTypeBound(ctx);
+        return new ASTNode(TYPE_PARAMETER_DEFINITION, null, identifier, typeBound);
+    }
+
+    private ASTNode parseTypeBound(ParserContext ctx) {
+        ASTNode bound = ctx.expected("Expected :> in type bound.", BOUND);
+        ASTNode types = parseSeparatedList(this::parseNameExpression, AMPERSAND, ctx);
+        return new ASTNode(TYPE_BOUND, null, bound, types);
     }
 
     @FunctionalInterface
@@ -175,64 +216,80 @@ public class Parser implements syspro.tm.parser.Parser {
         T parse(ParserContext ctx);
     }
 
-    private List<SyntaxNode> parseSeparatedList(ParserMethod<SyntaxNode> parser, AnySyntaxKind separator, ParserContext ctx) {
-        List<SyntaxNode> list = new ArrayList<>();
+    private ASTNode parseSeparatedList(ParserMethod<ASTNode> parser, AnySyntaxKind separator, ParserContext ctx) {
+        List<ASTNode> list = new ArrayList<>();
         do {
             list.add(parser.parse(ctx));
         } while (ctx.match(separator));
-        return list;
+        return new ASTNode(SEPARATED_LIST, null, list);
     }
 
 
-    private SyntaxNode parsePrimary(ParserContext ctx) {
-        List<SyntaxNode> extensions = new ArrayList<>();
-        SyntaxNode primary = parseAtom(ctx);
+    private ASTNode parsePrimary(ParserContext ctx) {
+//        List<ASTNode> extensions = new ArrayList<>();
+        ASTNode primary = parseAtom(ctx);
+        if (Objects.nonNull(primary)) return primary;
         while (true) {
             if (ctx.is(DOT)) {
-                Token name = ctx.expected("Expected Identifier", IDENTIFIER);
-                extensions.add(new Statement(MEMBER_ACCESS_EXPRESSION));
+                ASTNode dot = ctx.expected("Expected DOT in primary.", DOT);
+                ASTNode name = ctx.expected("Expected Identifier in primary", IDENTIFIER);
+                return new ASTNode(MEMBER_ACCESS_EXPRESSION, null, dot, name);
+
             } else if (ctx.is(OPEN_PAREN)) {
-                List<SyntaxNode> args = parseSeparatedList(this::parseExpression, COMMA, ctx);
-                ctx.expected("Expected ) in primary", CLOSE_PAREN);
-                extensions.add(new Statement(INVOCATION_EXPRESSION));
+                ASTNode openParen = ctx.expected("Expected ( in primary", OPEN_PAREN);
+                ASTNode args = parseSeparatedList(this::parseExpression, COMMA, ctx);
+                ASTNode closeParen = ctx.expected("Expected ) in primary", CLOSE_PAREN);
+                return new ASTNode(INVOCATION_EXPRESSION, null, openParen, args, closeParen);
+
             } else if (ctx.is(OPEN_BRACKET)) {
-                SyntaxNode expr = parseExpression(ctx);
-                ctx.expected("Expected } in primary", CLOSE_BRACKET);
-                extensions.add(new Statement(INDEX_EXPRESSION));
-            }
+                ASTNode openBracket = ctx.expected("Expected { in primary", OPEN_BRACKET);
+                ASTNode expr = null; // parseExpression(ctx);
+                ASTNode closeBracket = ctx.expected("Expected } in primary", CLOSE_BRACKET);
+                return new ASTNode(INDEX_EXPRESSION, null, openBracket, expr, closeBracket);
+
+            } else break;
         }
+
+        return null;
 
     }
 
-    private SyntaxNode parseAtom(ParserContext ctx) {
+    private ASTNode parseAtom(ParserContext ctx) {
         return switch (ctx.kind()) {
-            case IDENTIFIER -> new Statement(IDENTIFIER_NAME_EXPRESSION);
-            case THIS -> new Statement(THIS_EXPRESSION);
-            case SUPER -> new Statement(SUPER_EXPRESSION);
-            case NULL -> new Statement(NULL_LITERAL_EXPRESSION);
-            case STRING -> new Statement(STRING_LITERAL_EXPRESSION);
-            case RUNE -> new Statement(RUNE_LITERAL_EXPRESSION);
-            case INTEGER -> new Statement(INTEGER_LITERAL_EXPRESSION);
+            case IDENTIFIER -> new ASTNode(IDENTIFIER_NAME_EXPRESSION, ctx.step());
+            case THIS -> new ASTNode(THIS_EXPRESSION, ctx.step());
+            case SUPER -> new ASTNode(SUPER_EXPRESSION, ctx.step());
+            case NULL -> new ASTNode(NULL_LITERAL_EXPRESSION, ctx.step());
+            case STRING -> new ASTNode(STRING_LITERAL_EXPRESSION, ctx.step());
+            case RUNE -> new ASTNode(RUNE_LITERAL_EXPRESSION, ctx.step());
+            case INTEGER -> new ASTNode(INTEGER_LITERAL_EXPRESSION, ctx.step());
             case BOOLEAN -> {
-                if (ctx.get().toString().equals("true")) yield new Statement(TRUE_LITERAL_EXPRESSION);
-                yield new Statement(FALSE_LITERAL_EXPRESSION);
+                if (ctx.get().toString().equals("true")) yield new ASTNode(TRUE_LITERAL_EXPRESSION, ctx.step());
+                yield new ASTNode(FALSE_LITERAL_EXPRESSION, ctx.step());
             }
             case OPEN_PAREN -> {
-                ctx.expected("Expected ( in atom", OPEN_PAREN);
-                SyntaxNode expr = parseExpression(ctx);
-                ctx.expected("Expected ) in atom", CLOSE_PAREN);
-                yield new Statement(PARENTHESIZED_EXPRESSION);
+                ASTNode openParen = ctx.expected("Expected ( in atom", OPEN_PAREN);
+                ASTNode expr = null;
+                ASTNode closeParen = ctx.expected("Expected ) in atom", CLOSE_PAREN);
+                yield new ASTNode(PARENTHESIZED_EXPRESSION, null, openParen, expr, closeParen);
             }
-            default -> throw new IllegalStateException("Unexpected value: " + ctx.kind());
+            case INDENT -> new ASTNode(INDENT, ctx.step());
+            case DEDENT -> new ASTNode(DEDENT, ctx.step());
+            default -> {
+                ctx.logger.log(Logger.LogLevel.ERROR, Logger.Stage.SYNTAX,
+                        String.format("Unexpected token in primary: %s.", ctx.get().toString()));
+                yield null;
+            }
+
         };
     }
 
 
-    private SyntaxNode parseStatement(ParserContext ctx) {
+    private ASTNode parseStatement(ParserContext ctx) {
         return switch (ctx.kind()) {
             case VAR, VAL -> parseVarDefStatement(ctx);
             case IDENTIFIER -> {
-                if (ctx.look().toSyntaxKind().equals(EQUALS)) yield parseAssignStatement(ctx);
+                if (ctx.is(EQUALS)) yield parseAssignStatement(ctx);
                 yield parseExpressionStatement(ctx);
             }
             case RETURN -> parseReturnStatement(ctx);
@@ -245,108 +302,117 @@ public class Parser implements syspro.tm.parser.Parser {
         };
     }
 
-    private SyntaxNode parseExpressionStatement(ParserContext ctx) {
-        SyntaxNode expr = parseExpression(ctx);
-        assert expr != null;
-        return new Expression(expr.kind());
+    private ASTNode parseExpressionStatement(ParserContext ctx) {
+        ASTNode expr = parseExpression(ctx);
+        AnySyntaxKind kind = Objects.isNull(expr) ? NULL : expr.kind();
+        return new ASTNode(kind, ctx.get(), expr);
     }
 
-    private SyntaxNode parseExpression(ParserContext ctx) {
-        return null;
+    private ASTNode parseExpression(ParserContext ctx) {
+        return parsePrimary(ctx);
     }
 
-    private SyntaxNode parseIfStatement(ParserContext ctx) {
-        ctx.match(IF);
-        SyntaxNode cond = parseExpression(ctx);
-        ctx.match(INDENT);
-//        List<Statement> trueStatements = parseStatementList(ctx);
-        List<Statement> elseStatements = new ArrayList<>();
+    private ASTNode parseIfStatement(ParserContext ctx) {
+        ASTNode ifToken = ctx.expected("Expected if in if stmt.", IF);
+        ASTNode cond = parseExpression(ctx);
+
+        ASTNode elseStatements = null;
+        ASTNode indent = ctx.expected("Expected indent in if stmt.", INDENT);
+        ASTNode trueStatements = parseStatementList(ctx);
         if (ctx.match(ELSE)) {
             ctx.match(INDENT);
             elseStatements = parseStatementList(ctx);
         }
-        return new Statement(IF_STATEMENT);
+        return new ASTNode(IF_STATEMENT, null, cond, trueStatements, elseStatements);
     }
 
-    private SyntaxNode parseWhileStatement(ParserContext ctx) {
+    private ASTNode parseWhileStatement(ParserContext ctx) {
         ctx.match(WHILE);
-        SyntaxNode cond = parseExpression(ctx);
+        ASTNode cond = parseExpression(ctx);
         ctx.match(INDENT);
-        List<Statement> statements = parseStatementList(ctx);
-        return new Statement(WHILE_STATEMENT);
+        ASTNode statements = parseStatementList(ctx);
+        return new ASTNode(WHILE_STATEMENT, null, cond, statements);
     }
 
-    private SyntaxNode parseVarDefStatement(ParserContext ctx) {
-        return parseVarDeclaration(ctx);
+    private ASTNode parseVarDefStatement(ParserContext ctx) {
+        return parseVarDefinition(ctx);
     }
 
 
-    private SyntaxNode parseContinueStatement(ParserContext ctx) {
+    private ASTNode parseContinueStatement(ParserContext ctx) {
+        Token token = ctx.get();
         ctx.expected("Expected continue in statement.", CONTINUE);
-        return new Statement(CONTINUE_STATEMENT);
+        return new ASTNode(CONTINUE_STATEMENT, token);
     }
 
-    private SyntaxNode parseBreakStatement(ParserContext ctx) {
+    private ASTNode parseBreakStatement(ParserContext ctx) {
+        Token token = ctx.get();
         ctx.expected("Expected break in statement.", BREAK);
-        return new Statement(BREAK_STATEMENT);
+        return new ASTNode(BREAK_STATEMENT, token);
     }
 
-    private SyntaxNode parseAssignStatement(ParserContext ctx) {
-        SyntaxNode primary = parsePrimary(ctx);
+    private ASTNode parseAssignStatement(ParserContext ctx) {
+        Token token = ctx.get();
+        ASTNode primary = parsePrimary(ctx);
         ctx.expected("Expected = in assignment.", EQUALS);
-        SyntaxNode expr = parseExpression(ctx);
-        return new Statement(ASSIGNMENT_STATEMENT);
+        ASTNode expr = parseExpression(ctx);
+        return new ASTNode(ASSIGNMENT_STATEMENT, token, primary, expr);
     }
 
-    private SyntaxNode parseForStatement(ParserContext ctx) {
+    private ASTNode parseForStatement(ParserContext ctx) {
         ctx.match(FOR);
-        SyntaxNode primary = parsePrimary(ctx);
+        ASTNode primary = parsePrimary(ctx);
         ctx.expected("Expected IN in assignment.", IN);
-        SyntaxNode expr = parseExpression(ctx);
-        List<Statement> statements = null;
+        ASTNode expr = parseExpression(ctx);
+        ASTNode statements = null;
         if (ctx.match(INDENT)) {
             statements = parseStatementList(ctx);
             ctx.expected("Expected DEDENT in assignment.", DEDENT);
         }
-        return new Statement(FOR_STATEMENT);
+        return new ASTNode(FOR_STATEMENT, null, primary, expr, statements);
 
     }
 
-    private List<Statement> parseStatementList(ParserContext ctx) {
-        return null;
+    private ASTNode parseStatementList(ParserContext ctx) {
+        List<ASTNode> list = new ArrayList<>();
+        while (!ctx.is(DEDENT)) {
+            list.add(parseStatement(ctx));
+        }
+        return new ASTNode(LIST, null, list);
     }
 
-    private SyntaxNode parseReturnStatement(ParserContext ctx) {
-        ctx.expected("Expected return in statement.", RETURN);
-        SyntaxNode expr = null;
-        if (ctx.is(DEDENT)) {
+    private ASTNode parseReturnStatement(ParserContext ctx) {
+        ASTNode ret = ctx.expected("Expected return in statement.", RETURN);
+        ASTNode expr = null;
+        if (!ctx.is(DEDENT)) {
             expr = parseExpression(ctx);
         }
-        return new Statement(RETURN_STATEMENT);
+        return new ASTNode(RETURN_STATEMENT, null, ret, expr);
     }
 
 
-    private SyntaxNode parseUnaryExpression(ParserContext ctx) {
+    private ASTNode parseUnaryExpression(ParserContext ctx) {
+        Token token = ctx.get();
         return switch (ctx.kind()) {
             case EXCLAMATION -> {
                 ctx.match(EXCLAMATION);
-                SyntaxNode expr = parseUnaryExpression(ctx);
-                yield new Expression(LOGICAL_NOT_EXPRESSION);
+                ASTNode expr = parseUnaryExpression(ctx);
+                yield new ASTNode(LOGICAL_NOT_EXPRESSION, token, expr);
             }
             case PLUS -> {
                 ctx.match(PLUS);
-                SyntaxNode expr = parseUnaryExpression(ctx);
-                yield new Expression(UNARY_PLUS_EXPRESSION);
+                ASTNode expr = parseUnaryExpression(ctx);
+                yield new ASTNode(UNARY_PLUS_EXPRESSION, token, expr);
             }
             case MINUS -> {
                 ctx.match(MINUS);
-                SyntaxNode expr = parseUnaryExpression(ctx);
-                yield new Expression(UNARY_MINUS_EXPRESSION);
+                ASTNode expr = parseUnaryExpression(ctx);
+                yield new ASTNode(UNARY_MINUS_EXPRESSION, token, expr);
             }
             case TILDE -> {
                 ctx.match(TILDE);
-                SyntaxNode expr = parseUnaryExpression(ctx);
-                yield new Expression(BITWISE_NOT_EXPRESSION);
+                ASTNode expr = parseUnaryExpression(ctx);
+                yield new ASTNode(BITWISE_NOT_EXPRESSION, token, expr);
             }
             default -> parsePrimary(ctx);
         };
@@ -368,8 +434,8 @@ public class Parser implements syspro.tm.parser.Parser {
 
         ctx.logger.updateStage(Logger.Stage.SYNTAX);
 
-        List<SyntaxNode> statements = parse(ctx);
+        List<ASTNode> statements = parse(ctx);
         ctx.logger.close();
-        return null;
+        return new SysproParseResult(new ASTNode(SOURCE_TEXT, ctx.tokens.get(0), new ASTNode(LIST, null, statements)), null, null);
     }
 }

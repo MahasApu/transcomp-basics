@@ -1,7 +1,27 @@
 
 -------------LEXICAL----------
---INFO --LEXICAL   Token added - continue             0     <0 7>      0         
+--INFO --LEXICAL   Token added - class                0     <0 4>      0         
+--INFO --LEXICAL   Token added - MyClass              1     <6 12>     0         
+--INFO --LEXICAL   Token added - <INDENT>             0     <14 14>    0         
+--INFO --LEXICAL   Token added - def                  4     <17 19>    0         
+--INFO --LEXICAL   Token added - memberIsAt2          1     <21 31>    0         
+--INFO --LEXICAL   Token added - (                    0     <32 32>    0         
+--INFO --LEXICAL   Token added - )                    0     <33 33>    0         
+--INFO --LEXICAL   Token added - :                    0     <34 34>    0         
+--INFO --LEXICAL   Token added - Boolean              1     <36 42>    0         
+--INFO --LEXICAL   Token added - <INDENT>             0     <43 43>    0         
+--INFO --LEXICAL   Token added - var                  5     <48 50>    0         
+--INFO --LEXICAL   Token added - x                    1     <52 52>    0         
+--INFO --LEXICAL   Token added - =                    1     <54 54>    0         
+--INFO --LEXICAL   Token added - 10                   1     <56 57>    0         
+--INFO --LEXICAL   Token added - return               6     <64 69>    0         
+--INFO --LEXICAL   Token added - true                 1     <71 74>    1         
+--INFO --LEXICAL   Token added - <DEDENT>             0     <75 75>    0         
+--INFO --LEXICAL   Token added - <DEDENT>             0     <75 75>    0         
 
 -------------SYNTAX----------
---INFO --SYNTAX    start parsing
-Node: CONTINUE
+--INFO --SYNTAX   start parsing - class  IDENTIFIER
+--INFO --SYNTAX   Variable_def_stmt node -  VARIABLE_DEFINITION_STATEMENT [VAR, IDENTIFIER, NULL, NULL, EQUALS, INTEGER_LITERAL_EXPRESSION]
+--INFO --SYNTAX   Function definition -  FUNCTION_DEFINITION [LIST, DEF, IDENTIFIER, OPEN_PAREN, SEPARATED_LIST, CLOSE_PAREN, COLON, IDENTIFIER_NAME_EXPRESSION, INDENT, LIST, DEDENT]
+--INFO --SYNTAX   Memberblock of class -  LIST [FUNCTION_DEFINITION]
+--INFO --SYNTAX   final result  -  TYPE_DEFINITION [CLASS, IDENTIFIER, NULL, NULL, NULL, NULL, NULL, INDENT, LIST, DEDENT]
