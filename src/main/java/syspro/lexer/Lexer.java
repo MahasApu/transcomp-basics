@@ -1,5 +1,6 @@
 package syspro.lexer;
 
+import syspro.lexer.utils.UnicodeReader;
 import syspro.tm.lexer.*;
 
 import java.util.List;
@@ -148,7 +149,7 @@ public class Lexer implements syspro.tm.lexer.Lexer {
 
         if (isIdentifierStart(lexeme)) {
             switch (lexeme) {
-                case "this", "super", "is", "else", "for", "in", "while", "def", "var", "val", "return", "break",
+                case "this", "super", "is", "if", "else", "for", "in", "while", "def", "var", "val", "return", "break",
                      "continue", "abstract", "virtual", "override", "native" -> {
                     token = new KeywordToken(ctx.start - ctx.countLeadingTrivia, ctx.end + ctx.countTrailingTrivia,
                             ctx.countLeadingTrivia, ctx.countTrailingTrivia, keywordMap.get(lexeme));
@@ -228,7 +229,7 @@ public class Lexer implements syspro.tm.lexer.Lexer {
         ctx.end = ctx.nextPos;
         ctx.start = ctx.nextPos - ctx.bufferLen() - 1;
         return new StringLiteralToken(ctx.start - ctx.countLeadingTrivia, ctx.end + ctx.countTrailingTrivia,
-                ctx.countLeadingTrivia, ctx.countTrailingTrivia, ctx.symbolBuffer.toString());
+                ctx.countLeadingTrivia, ctx.countTrailingTrivia, UnicodeReader.substituteRune(ctx.symbolBuffer.toString()));
     }
 
 
@@ -236,9 +237,11 @@ public class Lexer implements syspro.tm.lexer.Lexer {
         ctx.end = ctx.nextPos;
         ctx.start = ctx.nextPos - ctx.bufferLen() - 1;
         String rune = ctx.symbolBuffer.toString();
-        if (isRune(rune))
+
+        if (isRune(rune)) {
             return new RuneLiteralToken(ctx.start - ctx.countLeadingTrivia, ctx.end + ctx.countTrailingTrivia,
-                    ctx.countLeadingTrivia, ctx.countTrailingTrivia, rune.codePointAt(0));
+                    ctx.countLeadingTrivia, ctx.countTrailingTrivia, UnicodeReader.runeToCodePoint(rune));
+        }
         return null;
     }
 
