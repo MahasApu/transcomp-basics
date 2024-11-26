@@ -32,12 +32,12 @@ public class Parser implements syspro.tm.parser.Parser {
     }
 
     private ASTNode parseDefinition(ParserContext ctx) {
-        if (ctx.is(CLASS, OBJECT, INTERFACE)) return parseClassDefinition(ctx);
+        if (ctx.is(CLASS, OBJECT, INTERFACE)) return parseTypeDefinition(ctx);
         if (ctx.is(VAL, VAR)) return parseVarDefinition(ctx);
         if (ctx.is(ABSTRACT, VIRTUAL, OVERRIDE, NATIVE, DEF)) return parseFuncDefinition(ctx);
         if (ctx.get().toString().equals("class") || ctx.get().toString().equals("object")
-                || ctx.get().toString().equals("interface")) return parseClassDefinition(ctx);
-        if (ctx.is(IDENTIFIER)) return parseClassDefinition(ctx);
+                || ctx.get().toString().equals("interface")) return parseTypeDefinition(ctx);
+        if (ctx.is(IDENTIFIER)) return parseTypeDefinition(ctx);
         return parseStatement(ctx);
     }
 
@@ -68,6 +68,11 @@ public class Parser implements syspro.tm.parser.Parser {
         ASTNode def = ctx.expected("Expected DEF keyword in func def.", DEF);
 
         ASTNode functionName = ctx.expected("Expected function name in func def.", IDENTIFIER);
+        // add panic mode
+        if (Objects.isNull(functionName)) {
+            functionName = new ASTNode(IDENTIFIER, ctx.get());
+            ctx.step();
+        }
 
         ASTNode openParen = ctx.expected("Expected ( for func def.", OPEN_PAREN);
         ASTNode parameterList = parseSeparatedList(this::parseParameterDefinition, COMMA, ctx);
@@ -96,6 +101,101 @@ public class Parser implements syspro.tm.parser.Parser {
         return node;
     }
 
+
+    private ASTNode parseParameterDefinition(ParserContext ctx) {
+        if (ctx.is(CLOSE_PAREN)) return new ASTNode(PARAMETER_DEFINITION, null, null, null, null);
+        ASTNode identifier = ctx.expected("Expected name in param def", IDENTIFIER);
+        ASTNode colon = ctx.expected("Expected COLON in param def", COLON);
+        ASTNode name = parseNameExpression(ctx);
+        return new ASTNode(PARAMETER_DEFINITION, null, identifier, colon, name);
+    }
+
+    private ASTNode parseTerminalList(ParserContext ctx, AnySyntaxKind... terms) {
+        List<ASTNode> terminalList = new ArrayList<>();
+        while (ctx.match(terms)) {
+            terminalList.add(new ASTNode(ctx.look().toSyntaxKind(), ctx.get()));
+        }
+        return new ASTNode(LIST, null, terminalList);
+    }
+
+    private ASTNode parseTypeDefinition(ParserContext ctx) {
+        AnySyntaxKind kind = switch (ctx.get().toString()) {
+            case "class" -> CLASS;
+            case "object" -> OBJECT;
+            case "interface" -> INTERFACE;
+            default -> NULL;
+        };
+        ASTNode keyword = new ASTNode(kind, ctx.get());
+        ctx.match(IDENTIFIER);
+        ASTNode name = ctx.expected("Expected name in type def", IDENTIFIER);
+
+        ASTNode lessThan = null;
+        ASTNode greaterThan = null;
+        ASTNode generics = null;
+        if (ctx.match(LESS_THAN)) {
+            lessThan = new ASTNode(LESS_THAN, ctx.prev());
+            generics = parseSeparatedList(this::parseTypeParameterDefinition, COMMA, ctx);
+            greaterThan = ctx.expected("Expected > in type def ", GREATER_THAN);
+        }
+
+        ASTNode typeBoundsList = null;
+        if (ctx.match(BOUND)) {
+            typeBoundsList = parseTypeBound(ctx);
+        }
+
+        ASTNode indent = null;
+        ASTNode memberDef = null;
+        ASTNode dedent = null;
+        if (ctx.match(INDENT)) {
+            indent = new ASTNode(INDENT, ctx.prev());
+            memberDef = parseVarDefDefinitionList(ctx);
+            ctx.logger.info(memberDef, "Memberblock of class - ");
+            dedent = ctx.expected("Expected DEDENT in type def", DEDENT);
+
+        }
+        ctx.pos--;
+        return new ASTNode(TYPE_DEFINITION, null, keyword, name, lessThan,
+                generics, greaterThan, typeBoundsList, indent, memberDef, dedent);
+    }
+
+    private ASTNode parseVarDefDefinitionList(ParserContext ctx) {
+        List<ASTNode> list = new ArrayList<>();
+        while (!ctx.is(DEDENT)) {
+            if (ctx.is(VAL, VAR)) list.add(parseVarDefinition(ctx));
+            else if (ctx.is(ABSTRACT, VIRTUAL, OVERRIDE, NATIVE, DEF)) list.add(parseFuncDefinition(ctx));
+            else break;
+        }
+        return new ASTNode(LIST, null, list);
+    }
+
+
+    private ASTNode parseTypeParameterDefinition(ParserContext ctx) {
+        ASTNode identifier = ctx.expected("Expected identifier in type param.", IDENTIFIER);
+        ASTNode typeBound = null;
+        if (ctx.is(BOUND)) typeBound = parseTypeBound(ctx);
+        return new ASTNode(TYPE_PARAMETER_DEFINITION, null, identifier, typeBound);
+    }
+
+    private ASTNode parseTypeBound(ParserContext ctx) {
+        ASTNode bound = new ASTNode(BOUND, ctx.prev());
+        ASTNode types = parseSeparatedList(this::parseNameExpression, AMPERSAND, ctx);
+        return new ASTNode(TYPE_BOUND, null, bound, types);
+    }
+
+    @FunctionalInterface
+    public interface ParserMethod<T> {
+        T parse(ParserContext ctx);
+    }
+
+    private ASTNode parseSeparatedList(ParserMethod<ASTNode> parser, AnySyntaxKind separator, ParserContext ctx) {
+
+        List<ASTNode> list = new ArrayList<>();
+        do {
+            list.add(parser.parse(ctx));
+        } while (ctx.match(separator));
+        return new ASTNode(SEPARATED_LIST, null, list);
+    }
+
     private ASTNode parseNameExpression(ParserContext ctx) {
         if (ctx.match(QUESTION)) {
             ASTNode question = new ASTNode(QUESTION, ctx.prev());
@@ -119,146 +219,38 @@ public class Parser implements syspro.tm.parser.Parser {
         return new ASTNode(IDENTIFIER_NAME_EXPRESSION, null, name);
     }
 
-    private List<ASTNode> parseParameterDefinitionList(ParserContext ctx) {
-        List<ASTNode> parameterList = new ArrayList<>();
-        while (true) {
-            if (ctx.match(IDENTIFIER)) {
-                parameterList.add(parseParameterDefinition(ctx));
-            } else if (!ctx.match(COMMA)) break;
-        }
-        return parameterList;
-    }
-
-    private ASTNode parseParameterDefinition(ParserContext ctx) {
-        if (ctx.is(CLOSE_PAREN)) return new ASTNode(PARAMETER_DEFINITION, null, null, null, null);
-        ASTNode identifier = ctx.expected("Expected name in param def", IDENTIFIER);
-        ASTNode colon = ctx.expected("Expected COLON in param def", COLON);
-        ASTNode name = parseNameExpression(ctx);
-        return new ASTNode(PARAMETER_DEFINITION, null, identifier, colon, name);
-    }
-
-    private ASTNode parseTerminalList(ParserContext ctx, AnySyntaxKind... terms) {
-        List<ASTNode> terminalList = new ArrayList<>();
-        while (ctx.match(terms)) {
-            terminalList.add(new ASTNode(ctx.look().toSyntaxKind(), ctx.get()));
-        }
-        return new ASTNode(LIST, null, terminalList);
-    }
-
-    private ASTNode parseClassDefinition(ParserContext ctx) {
-        AnySyntaxKind kind = switch (ctx.get().toString()) {
-            case "class" -> CLASS;
-            case "object" -> OBJECT;
-            case "interface" -> INTERFACE;
-            default -> NULL;
-        };
-        ASTNode keyword = new ASTNode(kind, ctx.get());
-        ctx.match(IDENTIFIER);
-        ASTNode name = ctx.expected("Expected name in class decl", IDENTIFIER);
-
-        ASTNode lessThan = null;
-        ASTNode greaterThan = null;
-        ASTNode generics = null;
-        if (ctx.match(LESS_THAN)) {
-            lessThan = new ASTNode(LESS_THAN, ctx.prev());
-            generics = parseSeparatedList(this::parseTypeParameterDefinition, COMMA, ctx);
-            greaterThan = ctx.expected("Expected > ", GREATER_THAN);
-        }
-
-        ASTNode typeBoundsList = null;
-        ASTNode bound = null;
-        if (ctx.match(BOUND)) {
-            bound = new ASTNode(BOUND, ctx.prev());
-            typeBoundsList = parseSeparatedList(this::parseTypeParameterDefinition, COMMA, ctx);
-        }
-
-        ASTNode indent = null;
-        ASTNode memberDef = null;
-        ASTNode dedent = null;
-        if (ctx.match(INDENT)) {
-            indent = new ASTNode(INDENT, ctx.prev());
-            memberDef = parseVarDefDefinitionList(ctx);
-            ctx.logger.info(memberDef, "Memberblock of class - ");
-            dedent = ctx.expected("Expected DEDENT", DEDENT);
-
-        }
-        ctx.pos--;
-        return new ASTNode(TYPE_DEFINITION, null, keyword, name, lessThan,
-                generics, greaterThan, bound, typeBoundsList, indent, memberDef, dedent);
-    }
-
-    private ASTNode parseVarDefDefinitionList(ParserContext ctx) {
-        List<ASTNode> list = new ArrayList<>();
-        while (!ctx.is(DEDENT)) {
-            if (ctx.is(VAL, VAR)) list.add(parseVarDefinition(ctx));
-            if (ctx.is(ABSTRACT, VIRTUAL, OVERRIDE, NATIVE, DEF)) list.add(parseFuncDefinition(ctx));
-            else break;
-        }
-        return new ASTNode(LIST, null, list);
-    }
-
-
-    private ASTNode parseTypeParameterDefinition(ParserContext ctx) {
-        ASTNode identifier = ctx.expected("Expected identifier in type param.", IDENTIFIER);
-        ASTNode typeBound = null;
-        if (ctx.is(BOUND)) typeBound = parseTypeBound(ctx);
-        return new ASTNode(TYPE_PARAMETER_DEFINITION, null, identifier, typeBound);
-    }
-
-    private ASTNode parseTypeBound(ParserContext ctx) {
-        ASTNode bound = ctx.expected("Expected :> in type bound.", BOUND);
-        ASTNode types = parseSeparatedList(this::parseNameExpression, AMPERSAND, ctx);
-        return new ASTNode(TYPE_BOUND, null, bound, types);
-    }
-
-    @FunctionalInterface
-    public interface ParserMethod<T> {
-        T parse(ParserContext ctx);
-    }
-
-    private ASTNode parseSeparatedList(ParserMethod<ASTNode> parser, AnySyntaxKind separator, ParserContext ctx) {
-
-        List<ASTNode> list = new ArrayList<>();
-        do {
-            list.add(parser.parse(ctx));
-        } while (ctx.match(separator));
-        return new ASTNode(SEPARATED_LIST, null, list);
-    }
-
-
     private ASTNode parsePrimary(ParserContext ctx) {
 
         ASTNode primary = parseAtom(ctx);
-        if (Objects.nonNull(primary)) return primary;
+
         while (true) {
             if (ctx.is(DOT)) {
                 ASTNode dot = ctx.expected("Expected DOT in primary.", DOT);
                 ASTNode name = ctx.expected("Expected Identifier in primary", IDENTIFIER);
-                return new ASTNode(MEMBER_ACCESS_EXPRESSION, null, dot, name);
+                primary = new ASTNode(MEMBER_ACCESS_EXPRESSION, null, primary, dot, name);
 
             } else if (ctx.is(OPEN_PAREN)) {
                 ASTNode openParen = ctx.expected("Expected ( in primary", OPEN_PAREN);
                 ASTNode args = parseSeparatedList(this::parseExpression, COMMA, ctx);
                 ASTNode closeParen = ctx.expected("Expected ) in primary", CLOSE_PAREN);
-                return new ASTNode(INVOCATION_EXPRESSION, null, openParen, args, closeParen);
+                primary = new ASTNode(INVOCATION_EXPRESSION, null, primary, openParen, args, closeParen);
 
             } else if (ctx.is(OPEN_BRACKET)) {
                 ASTNode openBracket = ctx.expected("Expected { in primary", OPEN_BRACKET);
-                ASTNode expr = null; // parseExpression(ctx);
+                ASTNode expr = parseExpression(ctx);
                 ASTNode closeBracket = ctx.expected("Expected } in primary", CLOSE_BRACKET);
-                return new ASTNode(INDEX_EXPRESSION, null, openBracket, expr, closeBracket);
+                primary = new ASTNode(INDEX_EXPRESSION, null, primary, openBracket, expr, closeBracket);
 
             } else break;
         }
-
-        return null;
+        return primary;
 
     }
 
     private ASTNode parseAtom(ParserContext ctx) {
 
         return switch (ctx.kind()) {
-            case IDENTIFIER -> new ASTNode(IDENTIFIER_NAME_EXPRESSION, ctx.step());
+            case IDENTIFIER -> parseNameExpression(ctx);
             case THIS -> new ASTNode(THIS_EXPRESSION, ctx.step());
             case SUPER -> new ASTNode(SUPER_EXPRESSION, ctx.step());
             case NULL -> new ASTNode(NULL_LITERAL_EXPRESSION, ctx.step());
@@ -297,24 +289,30 @@ public class Parser implements syspro.tm.parser.Parser {
             case IF -> parseIfStatement(ctx);
             case WHILE -> parseWhileStatement(ctx);
             case FOR -> parseForStatement(ctx);
-            case IDENTIFIER -> {
-                if (ctx.is(EQUALS)) yield parseAssignStatement(ctx);
-                yield parseExpressionStatement(ctx);
-            }
             default -> parseExpressionStatement(ctx);
         };
     }
 
     private ASTNode parseExpressionStatement(ParserContext ctx) {
-
         ASTNode expr = parseExpression(ctx);
-        AnySyntaxKind kind = Objects.isNull(expr) ? NULL : expr.kind();
-        return new ASTNode(kind, ctx.get(), expr);
+        return new ASTNode(EXPRESSION_STATEMENT, null, expr);
     }
 
     private ASTNode parseExpression(ParserContext ctx) {
-        return parseLogicalOr(ctx);
+        return parseAssignStatement(ctx);
     }
+
+    private ASTNode parseAssignStatement(ParserContext ctx) {
+
+        ASTNode primary = parseLogicalOr(ctx);
+        while (ctx.match(EQUALS)) {
+            ASTNode eq = new ASTNode(EQUALS, ctx.prev());
+            ASTNode expr = parseExpression(ctx);
+            primary = new ASTNode(ASSIGNMENT_STATEMENT, null, primary, eq, expr);
+        }
+        return primary;
+    }
+
 
     private ASTNode parseLogicalOr(ParserContext ctx) {
 
@@ -361,7 +359,7 @@ public class Parser implements syspro.tm.parser.Parser {
                 case LESS_THAN_EQUALS -> LESS_THAN_OR_EQUAL_EXPRESSION;
                 case GREATER_THAN -> GREATER_THAN_EXPRESSION;
                 case GREATER_THAN_EQUALS -> GREATER_THAN_OR_EQUAL_EXPRESSION;
-                case IS -> IS_EXPRESSION;
+                case IS -> IS_EXPRESSION; // TODO
                 default -> throw new IllegalStateException("Unexpected value: " + operator.kind());
             };
 
@@ -402,10 +400,10 @@ public class Parser implements syspro.tm.parser.Parser {
 
     private ASTNode parseBitwiseShift(ParserContext ctx) {
 
-        ASTNode expr = parseBinaryPlusMinus(ctx);
+        ASTNode expr = parseBinaryExpression(ctx);
         while (ctx.match(LESS_THAN_LESS_THAN, GREATER_THAN_GREATER_THAN)) {
             ASTNode operator = new ASTNode(ctx.prev().toSyntaxKind(), ctx.prev());
-            ASTNode right = parseBinaryPlusMinus(ctx);
+            ASTNode right = parseBinaryExpression(ctx);
 
             AnySyntaxKind kind = switch (operator.kind()) {
                 case LESS_THAN_LESS_THAN -> EQUALS_EXPRESSION;
@@ -418,11 +416,11 @@ public class Parser implements syspro.tm.parser.Parser {
         return expr;
     }
 
-    private ASTNode parseBinaryPlusMinus(ParserContext ctx) {
-        ASTNode expr = parseMultDivMod(ctx);
+    private ASTNode parseBinaryExpression(ParserContext ctx) {
+        ASTNode expr = parseTerm(ctx);
         while (ctx.match(PLUS, MINUS)) {
             ASTNode operator = new ASTNode(ctx.prev().toSyntaxKind(), ctx.prev());
-            ASTNode right = parseMultDivMod(ctx);
+            ASTNode right = parseTerm(ctx);
 
             AnySyntaxKind kind = switch (operator.kind()) {
                 case PLUS -> ADD_EXPRESSION;
@@ -435,7 +433,7 @@ public class Parser implements syspro.tm.parser.Parser {
         return expr;
     }
 
-    private ASTNode parseMultDivMod(ParserContext ctx) {
+    private ASTNode parseTerm(ParserContext ctx) {
         ASTNode expr = parseUnaryExpression(ctx);
         while (ctx.match(ASTERISK, SLASH, PERCENT)) {
             ASTNode operator = new ASTNode(ctx.prev().toSyntaxKind(), ctx.prev());
@@ -458,11 +456,6 @@ public class Parser implements syspro.tm.parser.Parser {
 
         Token token = ctx.get();
         return switch (ctx.kind()) {
-            case EXCLAMATION -> {
-                ctx.match(EXCLAMATION);
-                ASTNode expr = parseUnaryExpression(ctx);
-                yield new ASTNode(LOGICAL_NOT_EXPRESSION, token, expr);
-            }
             case PLUS -> {
                 ctx.match(PLUS);
                 ASTNode expr = parseUnaryExpression(ctx);
@@ -544,13 +537,6 @@ public class Parser implements syspro.tm.parser.Parser {
         return new ASTNode(BREAK_STATEMENT, token, breakNode);
     }
 
-    private ASTNode parseAssignStatement(ParserContext ctx) {
-
-        ASTNode primary = parsePrimary(ctx);
-        ASTNode eq = ctx.expected("Expected = in assignment.", EQUALS);
-        ASTNode expr = parseExpression(ctx);
-        return new ASTNode(ASSIGNMENT_STATEMENT, null, primary, eq, expr);
-    }
 
     private ASTNode parseForStatement(ParserContext ctx) {
 
@@ -603,6 +589,6 @@ public class Parser implements syspro.tm.parser.Parser {
 
         List<ASTNode> statements = parse(ctx);
         ctx.logger.close();
-        return new SysproParseResult(new ASTNode(SOURCE_TEXT, ctx.tokens.getFirst(), new ASTNode(LIST, null, statements)), null, null);
+        return new SysproParseResult(new ASTNode(SOURCE_TEXT, null, new ASTNode(LIST, null, statements)), null, null);
     }
 }

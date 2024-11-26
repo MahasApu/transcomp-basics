@@ -112,7 +112,7 @@ public class ParserContext {
                 return new ASTNode(kind, step());
             }
         }
-        logger.log(Logger.LogLevel.ERROR, Logger.Stage.SYNTAX, msg);
+        logger.log(Logger.LogLevel.ERROR, Logger.Stage.SYNTAX, msg + " Found " + kind());
         return null; //
     }
 
@@ -183,13 +183,5 @@ public class ParserContext {
             case INDENT, DEDENT, VAL, VAR, LESS_THAN, GREATER_THAN, COLON, EQUALS, IDENTIFIER -> true;
             default -> false;
         };
-    }
-
-    public Map<AnySyntaxKind, Integer> getPrecedence() {
-        return precedence;
-    }
-
-    public void setPrecedence(Map<AnySyntaxKind, Integer> precedence) {
-        this.precedence = precedence;
     }
 }

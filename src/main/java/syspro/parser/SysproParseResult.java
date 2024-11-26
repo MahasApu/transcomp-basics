@@ -22,7 +22,7 @@ public class SysproParseResult implements ParseResult {
 
     @Override
     public SyntaxNode root() {
-        return null;
+        return root;
     }
 
     @Override

@@ -1,9 +1,7 @@
 package syspro.utils;
 
-import syspro.parser.ast.ASTNode;
 import syspro.tm.lexer.Token;
 import syspro.tm.parser.AnySyntaxKind;
-import syspro.tm.parser.SyntaxKind;
 import syspro.tm.parser.SyntaxNode;
 
 import java.io.File;
@@ -11,10 +9,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
 
 import static syspro.tm.lexer.Keyword.NULL;
-import static syspro.tm.parser.SyntaxKind.LIST;
 
 
 public class Logger {
@@ -72,7 +68,7 @@ public class Logger {
                 token.end - token.trailingTriviaLength);
         String format = "%1$-20s %2$-5s %3$-10s %4$-10s";
         String tokenInfo = String.format(format,
-                token.toString(), token.leadingTriviaLength,
+                token, token.leadingTriviaLength,
                 tokenLength,
                 token.trailingTriviaLength);
         log(LogLevel.INFO, this.stage, message + tokenInfo);
@@ -88,8 +84,6 @@ public class Logger {
 
     public void info(SyntaxNode node, String message) {
         List<AnySyntaxKind> slots = new ArrayList<>();
-
-        node.descendants(false).stream().map(SyntaxNode::kind).forEach(System.out::println);
 
         for (int i = 0; i < node.slotCount(); i++) {
             if (node.slot(i) == null) slots.add(NULL);

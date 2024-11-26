@@ -14,7 +14,7 @@ object PrimitiveIntrinsics<T>
 object System
     native def print(message: String)
     native def println(message: String)
-    native def failFast(message: String)
+    native def failFast(message: String)F
 interface Iterator<T>
     def hasNext(): Boolean
     def next(): T

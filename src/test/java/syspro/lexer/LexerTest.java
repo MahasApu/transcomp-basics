@@ -240,7 +240,7 @@ class LexerTest {
                 
 class Indent7
   def memberIsAt2(): Boolean
-    return true
+    return 10 + 11
     if true""";
 
         Parser parser = new Parser();
