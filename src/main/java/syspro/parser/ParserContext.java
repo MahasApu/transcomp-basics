@@ -2,13 +2,13 @@ package syspro.parser;
 
 import syspro.parser.ast.ASTNode;
 import syspro.parser.ast.SyntaxCategory;
-import syspro.tm.lexer.Keyword;
-import syspro.tm.lexer.Symbol;
-import syspro.tm.lexer.Token;
+import syspro.tm.lexer.*;
 import syspro.tm.parser.AnySyntaxKind;
 import syspro.tm.parser.SyntaxKind;
+import syspro.tm.parser.TextSpan;
 import syspro.utils.Logger;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -25,6 +25,8 @@ public class ParserContext {
     public SysproParseResult result;
     public List<Token> tokens;
     public int pos = -1;
+    private boolean invalid = false;
+    private List<TextSpan> invalidRanges = new ArrayList<>();
 
     private static Map<AnySyntaxKind, Integer> precedence = Stream.of(new Object[][]{
             {PLUS, 1},
@@ -85,12 +87,12 @@ public class ParserContext {
 
 
     public Token get() {
+        if (isEOF()) return null;
         return tokens.get(pos);
     }
 
-    public Token look() {
-        if (!isEOF()) return get();
-        return null;
+    public void addInvalidRange(TextSpan textSpan) {
+        invalidRanges.add(textSpan);
     }
 
     public Token step() {
@@ -105,6 +107,7 @@ public class ParserContext {
 
     public ASTNode expected(String msg, AnySyntaxKind... kinds) {
         for (AnySyntaxKind kind : kinds) {
+            if (invalid && kind.equals(DEDENT)) invalid = false;
             if (kind instanceof SyntaxCategory && isCategory((SyntaxCategory) kind)) {
                 return new ASTNode(kind, step());
             }
@@ -112,8 +115,13 @@ public class ParserContext {
                 return new ASTNode(kind, step());
             }
         }
-        logger.log(Logger.LogLevel.ERROR, Logger.Stage.SYNTAX, msg + " Found " + kind());
+        invalid = true;
+//        logger.log(Logger.LogLevel.ERROR, Logger.Stage.SYNTAX, msg + " Found " + kind());
         return null; //
+    }
+
+    public void setInvalid() {
+        invalid = true;
     }
 
     public boolean isCategory(SyntaxCategory category) {
@@ -175,6 +183,27 @@ public class ParserContext {
             };
         }
         throw new IllegalArgumentException("Invalid SyntaxKind type: " + kind);
+    }
+
+    public void updateTokenKind(Keyword kind) {
+        if (kind.equals(NULL)) return;
+        Token newToken = switch (get()) {
+            case IdentifierToken t ->
+                    new KeywordToken(t.start, t.end, t.leadingTriviaLength, t.leadingTriviaLength, kind);
+            default -> get();
+        };
+        tokens.set(pos, newToken);
+    }
+
+    public int getInvalidEnd() {
+        int start = pos;
+        while (!isEOF() && !kind().equals(DEDENT)) {
+            step();
+        }
+        return pos - start; // FIXME
+    }
+    public List<TextSpan> getInvalidRanges() {
+        return invalidRanges;
     }
 
 

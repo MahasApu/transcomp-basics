@@ -238,10 +238,10 @@ class LexerTest {
     void continueTest() throws IOException {
         String strTest = """
                 
-class Indent7
-  def memberIsAt2(): Boolean
-    return 10 + 11
-    if true""";
+                class Indent7
+                  def memberIsAt2(): Boolean
+                    return 10 + 11
+                    if true""";
 
         Parser parser = new Parser();
         parser.parse(strTest);
@@ -271,18 +271,37 @@ class Indent7
     }
 
 
-
     @Test
     void objectGenericsTest() throws IOException {
-        String strTest ="""
-class Object
-object PrimitiveIntrinsics<T>
-    native def default(): T # Available for all primitive or nullable types
-    # The following are valid only for numeric T
-    native def one(): T
-""";
+        String strTest = """
+class Bad2
+    val x = 
+    val y = 42""";
+
+        Parser parser = new Parser();
+        parser.parse(strTest);
+    }
+
+    @Test
+    void factorialTest() throws IOException {
+        String strTest = """
+                object Factorial
+                
+                  def iterative(n: Int64): Int64
+                    var result = 1
+                    for i in Range<UInt64>(1, n + 1)
+                      result = result * i
+                    return result
+                
+                  def recursive(n: Int64): Int64
+                    if n > 1
+                      return n * recursive(n - 1)
+                    return 1
+                """;
 
         Parser parser = new Parser();
         parser.parse(strTest);
     }
 }
+
+

@@ -2,7 +2,7 @@ package syspro.parser.ast;
 
 import syspro.tm.parser.AnySyntaxKind;
 
-public enum SyntaxCategory implements AnySyntaxKind {
+public enum SyntaxCategory implements AnySyntaxKind{
     ANY,
     TERMINAL,
     NON_TERMINAL,
@@ -12,5 +12,10 @@ public enum SyntaxCategory implements AnySyntaxKind {
     PRIMARY,
     NAME_EXPRESSION,
     INDENT,
-    DEDENT
+    DEDENT;
+
+    @Override
+    public boolean isTerminal() {
+        return false;
+    }
 }

@@ -5,6 +5,7 @@ import syspro.tm.parser.AnySyntaxKind;
 import syspro.tm.parser.SyntaxNode;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -24,12 +25,7 @@ public class ASTNode implements SyntaxNode {
     }
 
     private List<ASTNode> reduceNulls(ASTNode[] slots) {
-        List<ASTNode> list = new ArrayList<>();
-        for (ASTNode node : slots) {
-            if (Objects.isNull(node)) list.add(new ASTNode(NULL, null));
-            else list.add(node);
-        }
-        return list;
+        return new ArrayList<>(Arrays.asList(slots));
     }
 
     public ASTNode(AnySyntaxKind kind, Token token, List<ASTNode> slots) {
