@@ -169,7 +169,9 @@ public class Parser implements syspro.tm.parser.Parser {
             memberDef = parseVarDefDefinitionList(ctx);
             dedent = ctx.expected("Expected DEDENT in type def", DEDENT);
             if (memberDef.slotCount() == 0) ctx.addInvalidRange(new TextSpan(ctx.pos, ctx.getInvalidEnd()));
-        } else if (ctx.definitionStarts() || ctx.statementStarts())
+        }
+        else if (ctx.definitionStarts() || ctx.statementStarts())
+            ctx.addInvalidRange(new TextSpan(ctx.pos, ctx.getInvalidEnd()));
 
         ctx.pos--;
         return new ASTNode(TYPE_DEFINITION, null, keyword, name, lessThan,
@@ -532,7 +534,7 @@ public class Parser implements syspro.tm.parser.Parser {
             indentTrue = ctx.expected("Expected indent in if stmt.", INDENT);
             statementsTrue = parseStatementList(ctx);
             if (isNull(statementsTrue)) {
-                ctx.addInvalidRange(new TextSpan(--ctx.pos, ctx.getInvalidEnd()));
+                ctx.addInvalidRange(new TextSpan(ctx.pos, ctx.getInvalidEnd()));
                 indentTrue = null;
             } else dedentTrue = ctx.expected("Expected dedent in if stmt.", DEDENT);
         }
