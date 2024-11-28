@@ -169,8 +169,7 @@ public class Parser implements syspro.tm.parser.Parser {
             memberDef = parseVarDefDefinitionList(ctx);
             dedent = ctx.expected("Expected DEDENT in type def", DEDENT);
             if (memberDef.slotCount() == 0) ctx.addInvalidRange(new TextSpan(ctx.pos, ctx.getInvalidEnd()));
-        }
-        else if (ctx.definitionStarts() || ctx.statementStarts())
+        } else if (ctx.definitionStarts() || ctx.statementStarts())
             ctx.addInvalidRange(new TextSpan(ctx.pos, ctx.getInvalidEnd()));
 
         ctx.pos--;
@@ -229,6 +228,7 @@ public class Parser implements syspro.tm.parser.Parser {
         }
 
         ASTNode name = ctx.expected("Expected name in name expr.", IDENTIFIER);
+        int resetPos = ctx.pos;
 
         ASTNode typeArguments = null;
         ASTNode lessThan = null;
@@ -239,9 +239,10 @@ public class Parser implements syspro.tm.parser.Parser {
             greaterThan = ctx.expected("Expected > in name expr.", GREATER_THAN);
         }
 
-        if (isNull(lessThan) != isNull(greaterThan))
+        if (isNull(lessThan) != isNull(greaterThan)) {
+            ctx.pos = resetPos;
             return new ASTNode(IDENTIFIER_NAME_EXPRESSION, null, name); // TODO
-
+        }
 
         if (Objects.nonNull(typeArguments) && typeArguments.slotCount() != 0)
             return new ASTNode(GENERIC_NAME_EXPRESSION, null, name, lessThan, typeArguments, greaterThan);
@@ -308,7 +309,7 @@ public class Parser implements syspro.tm.parser.Parser {
             }
             default -> {
                 ctx.logger.log(Logger.LogLevel.ERROR, Logger.Stage.SYNTAX,
-                        String.format("Unexpected token in primary: %s.", value));
+                        String.format("Unexpected token in primary: %s.", value.kind()));
                 ctx.pos--;
                 yield null;
             }
@@ -638,6 +639,8 @@ public class Parser implements syspro.tm.parser.Parser {
 
     @Override
     public ParseResult parse(String s) {
+//        c++;
+//        if (c != 0) return null;
 
         Lexer lexer = new Lexer();
         List<Token> tokens = lexer.lex(s);

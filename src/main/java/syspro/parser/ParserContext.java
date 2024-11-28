@@ -230,8 +230,15 @@ public class ParserContext {
     }
 
     public boolean statementStarts() {
+
+        boolean isTypeDef = switch (get().toString()) {
+            case "class", "object", "interface" -> true;
+            default -> false;
+        };
+        if (isTypeDef) return false;
+
         return switch (kind()) {
-            case THIS, SUPER, IDENTIFIER,
+            case THIS, SUPER, IDENTIFIER, VAL, VAR,
                  BREAK, RETURN, CONTINUE, IF, WHILE, FOR -> true;
             default -> false;
         };
