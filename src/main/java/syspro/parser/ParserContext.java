@@ -202,10 +202,10 @@ public class ParserContext {
             step();
         }
 
-        while (indentLevel != 0) {
-            if (kind().equals(DEDENT)) indentLevel--;
-            step();
-        }
+//        while (indentLevel != 0) {
+//            if (kind().equals(DEDENT)) indentLevel--;
+//            step();
+//        }
 
         return pos - start; // FIXME
     }
@@ -231,8 +231,7 @@ public class ParserContext {
 
     public boolean statementStarts() {
         return switch (kind()) {
-            case VAL, VAR, ABSTRACT, VIRTUAL, OVERRIDE, NATIVE, DEF,
-                 IDENTIFIER, THIS, SUPER,
+            case THIS, SUPER, IDENTIFIER,
                  BREAK, RETURN, CONTINUE, IF, WHILE, FOR -> true;
             default -> false;
         };
