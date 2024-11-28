@@ -170,7 +170,6 @@ public class Parser implements syspro.tm.parser.Parser {
             dedent = ctx.expected("Expected DEDENT in type def", DEDENT);
             if (memberDef.slotCount() == 0) ctx.addInvalidRange(new TextSpan(ctx.pos, ctx.getInvalidEnd()));
         } else if (ctx.definitionStarts() || ctx.statementStarts())
-            ctx.addInvalidRange(new TextSpan(ctx.pos, ctx.getInvalidEnd()));
 
         ctx.pos--;
         return new ASTNode(TYPE_DEFINITION, null, keyword, name, lessThan,
