@@ -107,7 +107,6 @@ public class ParserContext {
 
     public ASTNode expected(String msg, AnySyntaxKind... kinds) {
         for (AnySyntaxKind kind : kinds) {
-            if (invalid && kind.equals(DEDENT)) invalid = false;
             if (kind instanceof SyntaxCategory && isCategory((SyntaxCategory) kind)) {
                 return new ASTNode(kind, step());
             }
@@ -115,7 +114,6 @@ public class ParserContext {
                 return new ASTNode(kind, step());
             }
         }
-        invalid = true;
 //        logger.log(Logger.LogLevel.ERROR, Logger.Stage.SYNTAX, msg + " Found " + kind());
         return null; //
     }
@@ -189,7 +187,7 @@ public class ParserContext {
         if (kind.equals(NULL)) return;
         Token newToken = switch (get()) {
             case IdentifierToken t ->
-                    new KeywordToken(t.start, t.end, t.leadingTriviaLength, t.leadingTriviaLength, kind);
+                    new KeywordToken(t.start, t.end, t.leadingTriviaLength, t.trailingTriviaLength, kind);
             default -> get();
         };
         tokens.set(pos, newToken);
@@ -197,11 +195,21 @@ public class ParserContext {
 
     public int getInvalidEnd() {
         int start = pos;
+        int indentLevel = 0;
+
         while (!isEOF() && !kind().equals(DEDENT)) {
+            if (kind().equals(INDENT)) indentLevel++;
             step();
         }
+
+        while (indentLevel != 0) {
+            if (kind().equals(DEDENT)) indentLevel--;
+            step();
+        }
+
         return pos - start; // FIXME
     }
+
     public List<TextSpan> getInvalidRanges() {
         return invalidRanges;
     }
@@ -210,6 +218,22 @@ public class ParserContext {
     public boolean isTerm(Token token) {
         return switch (token.toSyntaxKind()) {
             case INDENT, DEDENT, VAL, VAR, LESS_THAN, GREATER_THAN, COLON, EQUALS, IDENTIFIER -> true;
+            default -> false;
+        };
+    }
+
+    public boolean definitionStarts() {
+        return switch (kind()) {
+            case VAL, VAR, ABSTRACT, VIRTUAL, OVERRIDE, NATIVE, DEF -> true;
+            default -> false;
+        };
+    }
+
+    public boolean statementStarts() {
+        return switch (kind()) {
+            case VAL, VAR, ABSTRACT, VIRTUAL, OVERRIDE, NATIVE, DEF,
+                 IDENTIFIER, THIS, SUPER,
+                 BREAK, RETURN, CONTINUE, IF, WHILE, FOR -> true;
             default -> false;
         };
     }
