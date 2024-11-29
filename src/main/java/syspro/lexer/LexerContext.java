@@ -6,7 +6,8 @@ import syspro.tm.lexer.*;
 import java.util.ArrayList;
 import java.util.Objects;
 
-import static syspro.lexer.State.ObservedState.*;
+import static syspro.lexer.State.ObservedState.DEFAULT;
+import static syspro.lexer.State.ObservedState.INDENTATION;
 import static syspro.lexer.utils.UnicodeReader.codePointToString;
 import static syspro.lexer.utils.UnicodeReader.getUnicodePoints;
 
@@ -129,7 +130,7 @@ public class LexerContext {
 
     boolean isNewline(int pos) {
         assert pos < codePoints.length || pos + 1 < codePoints.length;
-        return codePoints[pos] == '\n' || (codePoints[pos - 1] == '\r' && codePoints[pos] == '\n');
+        return codePoints[pos] == '\n' || (codePoints[pos] == '\r' && codePoints[pos + 1] == '\n');
 
     }
 
@@ -158,7 +159,8 @@ public class LexerContext {
                     new StringLiteralToken(s.start, s.end + countLeadingTrivia, s.leadingTriviaLength, s.trailingTriviaLength + countLeadingTrivia, s.value);
             case SymbolToken s ->
                     new SymbolToken(s.start, s.end + countLeadingTrivia, s.leadingTriviaLength, s.trailingTriviaLength + countLeadingTrivia, s.symbol);
-            case BadToken b -> new BadToken(b.start, b.end + countLeadingTrivia, b.leadingTriviaLength, b.trailingTriviaLength + countLeadingTrivia);
+            case BadToken b ->
+                    new BadToken(b.start, b.end + countLeadingTrivia, b.leadingTriviaLength, b.trailingTriviaLength + countLeadingTrivia);
             default -> throw new IllegalStateException("Unexpected value: " + tokenToUpdate);
         };
     }

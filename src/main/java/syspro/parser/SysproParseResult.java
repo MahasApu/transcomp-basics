@@ -27,7 +27,7 @@ public class SysproParseResult implements ParseResult {
 
     @Override
     public Collection<TextSpan> invalidRanges() {
-        return List.of();
+        return invalidRanges;
     }
 
     @Override

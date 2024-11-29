@@ -7,9 +7,6 @@ import syspro.tm.parser.SyntaxNode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
-
-import static syspro.tm.lexer.Keyword.NULL;
 
 public class ASTNode implements SyntaxNode {
 
