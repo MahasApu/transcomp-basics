@@ -164,11 +164,14 @@ public class Parser implements syspro.tm.parser.Parser {
         ASTNode indent = null;
         ASTNode memberDef = null;
         ASTNode dedent = null;
+
         if (ctx.match(INDENT)) {
             indent = new ASTNode(INDENT, ctx.prev());
             memberDef = parseVarDefDefinitionList(ctx);
             dedent = ctx.expected("Expected DEDENT in type def", DEDENT);
-            if (memberDef.slotCount() == 0) ctx.addInvalidRange(new TextSpan(ctx.get().start, ctx.getInvalidTokenEnd() - ctx.get().start));
+            if (memberDef.slotCount() == 0)
+                ctx.addInvalidRange(new TextSpan(ctx.get().start, ctx.getInvalidTokenEnd() - ctx.get().start));
+
         } else if (ctx.definitionStarts() || ctx.statementStarts())
             ctx.addInvalidRange(new TextSpan(ctx.get().start, ctx.get().start));
 
@@ -184,7 +187,6 @@ public class Parser implements syspro.tm.parser.Parser {
             else if (ctx.is(ABSTRACT, VIRTUAL, OVERRIDE, NATIVE, DEF)) list.add(parseFuncDefinition(ctx));
             else break;
         }
-
         return new ASTNode(LIST, null, list);
     }
 
@@ -243,7 +245,7 @@ public class Parser implements syspro.tm.parser.Parser {
 
         if (isNull(lessThan) != isNull(greaterThan)) {
             ctx.pos = resetPos;
-            return new ASTNode(IDENTIFIER_NAME_EXPRESSION, null, name); // TODO
+            return new ASTNode(IDENTIFIER_NAME_EXPRESSION, null, name);
         }
 
         if (Objects.nonNull(typeArguments) && typeArguments.slotCount() != 0)
@@ -287,7 +289,7 @@ public class Parser implements syspro.tm.parser.Parser {
         return switch (ctx.prev().toSyntaxKind()) {
             case BAD -> {
                 Token t = ctx.prev();
-                ctx.addInvalidRange(new TextSpan(t.start + t.leadingTriviaLength, 1 ));
+                ctx.addInvalidRange(new TextSpan(t.start + t.leadingTriviaLength, t.end - t.start));
                 yield value;
             }
             case THIS -> new ASTNode(THIS_EXPRESSION, null, value);
@@ -386,6 +388,7 @@ public class Parser implements syspro.tm.parser.Parser {
     }
 
     private ASTNode parseComparison(ParserContext ctx) {
+
         ASTNode expr = parseBitwiseOr(ctx);
         while (ctx.match(EQUALS_EQUALS, EXCLAMATION_EQUALS, LESS_THAN,
                 LESS_THAN_EQUALS, GREATER_THAN, GREATER_THAN_EQUALS, IS)) {
@@ -399,11 +402,11 @@ public class Parser implements syspro.tm.parser.Parser {
                 case LESS_THAN_EQUALS -> LESS_THAN_OR_EQUAL_EXPRESSION;
                 case GREATER_THAN -> GREATER_THAN_EXPRESSION;
                 case GREATER_THAN_EQUALS -> GREATER_THAN_OR_EQUAL_EXPRESSION;
-                case IS -> IS_EXPRESSION; // TODO
-                default -> throw new IllegalStateException("Unexpected value: " + operator.kind());
+                default -> null;
             };
-
-            expr = new ASTNode(kind, null, expr, operator, right);
+            if (ctx.is(IDENTIFIER) && Objects.equals(kind, IS_EXPRESSION))
+                expr = new ASTNode(kind, null, expr, operator, right, new ASTNode(IDENTIFIER, ctx.get()));
+            else expr = new ASTNode(kind, null, expr, operator, right);
         }
         return expr;
     }
@@ -547,7 +550,8 @@ public class Parser implements syspro.tm.parser.Parser {
             elseNode = ctx.expected("Expected else in if stmt.", ELSE);
             indentFalse = ctx.expected("Expected indent in if stmt.", INDENT);
             statementsFalse = parseStatementList(ctx, ctx::statementStarts);
-            if (isNull(statementsFalse)) ctx.addInvalidRange(new TextSpan(ctx.get().start, ctx.getInvalidTokenEnd() - ctx.get().start));
+            if (isNull(statementsFalse))
+                ctx.addInvalidRange(new TextSpan(ctx.get().start, ctx.getInvalidTokenEnd() - ctx.get().start));
             dedentFalse = ctx.expected("Expected dedent in if stmt.", DEDENT);
         }
         return new ASTNode(IF_STATEMENT, null, ifNode, cond, indentTrue, statementsTrue, dedentTrue,
@@ -565,7 +569,8 @@ public class Parser implements syspro.tm.parser.Parser {
         if (ctx.is(INDENT)) {
             indent = ctx.expected("Expected indent in if stmt.", INDENT);
             statements = parseStatementList(ctx, ctx::statementStarts);
-            if (isNull(statements)) ctx.addInvalidRange(new TextSpan(ctx.get().start, ctx.getInvalidTokenEnd() - ctx.get().start));
+            if (isNull(statements))
+                ctx.addInvalidRange(new TextSpan(ctx.get().start, ctx.getInvalidTokenEnd() - ctx.get().start));
             dedent = ctx.expected("Expected dedent in if stmt.", DEDENT);
         }
         return new ASTNode(WHILE_STATEMENT, null, whileNode, cond, indent, statements, dedent);
@@ -600,10 +605,12 @@ public class Parser implements syspro.tm.parser.Parser {
         ASTNode indent = null;
         ASTNode dedent = null;
         ASTNode statements = null;
+
         if (ctx.is(INDENT)) {
             indent = ctx.expected("Expected indent in for stmt.", INDENT);
             statements = parseStatementList(ctx, ctx::statementStarts);
-            if (isNull(statements)) ctx.addInvalidRange(new TextSpan(ctx.get().start, ctx.getInvalidTokenEnd() - ctx.get().start));
+            if (isNull(statements))
+                ctx.addInvalidRange(new TextSpan(ctx.get().start, ctx.getInvalidTokenEnd() - ctx.get().start));
             dedent = ctx.expected("Expected dedent in for stmt.", DEDENT);
         }
         return new ASTNode(FOR_STATEMENT, null, forNode, primary, in, expr, indent, statements, dedent);
@@ -631,10 +638,10 @@ public class Parser implements syspro.tm.parser.Parser {
     private ASTNode parseReturnStatement(ParserContext ctx) {
         ASTNode ret = ctx.expected("Expected return in statement.", RETURN);
         ASTNode expr = null;
+
         if (!ctx.is(DEDENT)) {
             expr = parseExpression(ctx);
         }
-//        if (!ctx.is(DEDENT)) ctx.addInvalidRange(new TextSpan(ctx.pos, ctx.getInvalidEnd()));
         return new ASTNode(RETURN_STATEMENT, null, ret, expr);
     }
 
