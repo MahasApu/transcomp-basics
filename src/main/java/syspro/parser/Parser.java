@@ -318,6 +318,7 @@ public class Parser implements syspro.tm.parser.Parser {
                 ctx.logger.log(Logger.LogLevel.ERROR, Logger.Stage.SYNTAX,
                         String.format("Unexpected token in primary: %s.", value.kind()));
                 ctx.pos--;
+                ctx.addInvalidRange(ctx.get().start, ctx.get().end);
                 yield null;
             }
 
@@ -393,6 +394,8 @@ public class Parser implements syspro.tm.parser.Parser {
                 LESS_THAN_EQUALS, GREATER_THAN, GREATER_THAN_EQUALS, IS)) {
             ASTNode operator = new ASTNode(ctx.prev().toSyntaxKind(), ctx.prev());
             ASTNode right = parseBitwiseOr(ctx);
+
+            if (isNull(right)) continue;
 
             AnySyntaxKind kind = switch (operator.kind()) {
                 case EQUALS_EQUALS -> EQUALS_EXPRESSION;

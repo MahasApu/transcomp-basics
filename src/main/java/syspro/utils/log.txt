@@ -1,84 +1,69 @@
 
 -------------LEXICAL----------
---INFO --LEXICAL   Token added - object               0     <0 5>      0         
---INFO --LEXICAL   Token added - Factorial            1     <7 15>     0         
---INFO --LEXICAL   Token added - <INDENT>             0     <18 19>    0         
---INFO --LEXICAL   Token added - def                  6     <22 24>    0         
---INFO --LEXICAL   Token added - iterative            1     <26 34>    0         
---INFO --LEXICAL   Token added - (                    0     <35 35>    0         
---INFO --LEXICAL   Token added - n                    0     <36 36>    0         
---INFO --LEXICAL   Token added - :                    0     <37 37>    0         
---INFO --LEXICAL   Token added - Int64                1     <39 43>    0         
---INFO --LEXICAL   Token added - )                    0     <44 44>    0         
---INFO --LEXICAL   Token added - :                    0     <45 45>    0         
---INFO --LEXICAL   Token added - Int64                1     <47 51>    0         
---INFO --LEXICAL   Token added - <INDENT>             0     <52 53>    0         
---INFO --LEXICAL   Token added - var                  6     <58 60>    0         
---INFO --LEXICAL   Token added - result               1     <62 67>    0         
---INFO --LEXICAL   Token added - =                    1     <69 69>    0         
---INFO --LEXICAL   Token added - 1                    1     <71 71>    0         
---INFO --LEXICAL   Token added - for                  6     <78 80>    0         
---INFO --LEXICAL   Token added - i                    1     <82 82>    0         
---INFO --LEXICAL   Token added - in                   1     <84 85>    0         
---INFO --LEXICAL   Token added - Range                1     <87 91>    0         
---INFO --LEXICAL   Token added - <                    0     <92 92>    0         
---INFO --LEXICAL   Token added - UInt64               0     <93 98>    0         
---INFO --LEXICAL   Token added - >                    0     <99 99>    0         
---INFO --LEXICAL   Token added - (                    0     <100 100>  0         
---INFO --LEXICAL   Token added - 1                    0     <101 101>  0         
---INFO --LEXICAL   Token added - ,                    0     <102 102>  0         
---INFO --LEXICAL   Token added - n                    1     <104 104>  0         
---INFO --LEXICAL   Token added - +                    1     <106 106>  0         
---INFO --LEXICAL   Token added - 1                    1     <108 108>  0         
---INFO --LEXICAL   Token added - )                    0     <109 109>  0         
---INFO --LEXICAL   Token added - <INDENT>             0     <110 111>  0         
---INFO --LEXICAL   Token added - result               8     <118 123>  0         
---INFO --LEXICAL   Token added - =                    1     <125 125>  0         
---INFO --LEXICAL   Token added - result               1     <127 132>  0         
---INFO --LEXICAL   Token added - *                    1     <134 134>  0         
---INFO --LEXICAL   Token added - i                    1     <136 136>  0         
---INFO --LEXICAL   Token added - <DEDENT>             0     <137 138>  0         
---INFO --LEXICAL   Token added - return               6     <143 148>  0         
---INFO --LEXICAL   Token added - result               1     <150 155>  0         
---INFO --LEXICAL   Token added - <DEDENT>             0     <156 157>  0         
---INFO --LEXICAL   Token added - <DEDENT>             0     <156 157>  0         
---INFO --LEXICAL   Token added - <INDENT>             0     <158 159>  0         
---INFO --LEXICAL   Token added - def                  6     <162 164>  0         
---INFO --LEXICAL   Token added - recursive            1     <166 174>  0         
---INFO --LEXICAL   Token added - (                    0     <175 175>  0         
---INFO --LEXICAL   Token added - n                    0     <176 176>  0         
---INFO --LEXICAL   Token added - :                    0     <177 177>  0         
---INFO --LEXICAL   Token added - Int64                1     <179 183>  0         
---INFO --LEXICAL   Token added - )                    0     <184 184>  0         
---INFO --LEXICAL   Token added - :                    0     <185 185>  0         
---INFO --LEXICAL   Token added - Int64                1     <187 191>  0         
---INFO --LEXICAL   Token added - <INDENT>             0     <192 193>  0         
---INFO --LEXICAL   Token added - if                   6     <198 199>  0         
---INFO --LEXICAL   Token added - n                    1     <201 201>  0         
---INFO --LEXICAL   Token added - >                    1     <203 203>  0         
---INFO --LEXICAL   Token added - 1                    1     <205 205>  0         
---INFO --LEXICAL   Token added - <INDENT>             0     <206 207>  0         
---INFO --LEXICAL   Token added - return               8     <214 219>  0         
---INFO --LEXICAL   Token added - n                    1     <221 221>  0         
---INFO --LEXICAL   Token added - *                    1     <223 223>  0         
---INFO --LEXICAL   Token added - recursive            1     <225 233>  0         
---INFO --LEXICAL   Token added - (                    0     <234 234>  0         
---INFO --LEXICAL   Token added - n                    0     <235 235>  0         
---INFO --LEXICAL   Token added - -                    1     <237 237>  0         
---INFO --LEXICAL   Token added - 1                    1     <239 239>  0         
---INFO --LEXICAL   Token added - )                    0     <240 240>  0         
---INFO --LEXICAL   Token added - <DEDENT>             0     <241 242>  0         
---INFO --LEXICAL   Token added - return               6     <247 252>  0         
---INFO --LEXICAL   Token added - 1                    1     <254 254>  2         
---INFO --LEXICAL   Token added - <DEDENT>             0     <255 256>  0         
---INFO --LEXICAL   Token added - <DEDENT>             0     <255 256>  0         
+--INFO --LEXICAL   Token added - class                0     <0 4>      0         
+--INFO --LEXICAL   Token added - a                    1     <6 6>      0         
+--INFO --LEXICAL   Token added - <INDENT>             0     <7 7>      0         
+--INFO --LEXICAL   Token added - def                  3     <10 12>    0         
+--INFO --LEXICAL   Token added - a                    1     <14 14>    0         
+--INFO --LEXICAL   Token added - (                    0     <15 15>    0         
+--INFO --LEXICAL   Token added - )                    0     <16 16>    0         
+--INFO --LEXICAL   Token added - <INDENT>             0     <17 17>    0         
+--INFO --LEXICAL   Token added - x                    5     <22 22>    0         
+--INFO --LEXICAL   Token added - .                    0     <23 23>    0         
+--INFO --LEXICAL   Token added - add                  0     <24 26>    0         
+--INFO --LEXICAL   Token added - (                    0     <27 27>    0         
+--INFO --LEXICAL   Token added - 16                   0     <28 29>    0         
+--INFO --LEXICAL   Token added - >                    1     <31 31>    0         
+--INFO --LEXICAL   Token added - >                    1     <33 33>    0         
+--INFO --LEXICAL   Token added - 2                    1     <35 35>    0         
+--INFO --LEXICAL   Token added - )                    0     <36 36>    2         
+--INFO --LEXICAL   Token added - <DEDENT>             0     <38 38>    0         
+--INFO --LEXICAL   Token added - <DEDENT>             0     <38 38>    0         
 
 -------------SYNTAX----------
---INFO --SYNTAX   start parsing - object  IDENTIFIER
---INFO --SYNTAX   Variable_def_stmt node -  VARIABLE_DEFINITION [VAR, IDENTIFIER, NULL, NULL, EQUALS, INTEGER_LITERAL_EXPRESSION]
---INFO --SYNTAX   Function definition -  FUNCTION_DEFINITION [NULL, DEF, IDENTIFIER, OPEN_PAREN, SEPARATED_LIST, CLOSE_PAREN, COLON, IDENTIFIER_NAME_EXPRESSION, INDENT, LIST, DEDENT]
---INFO --SYNTAX   Memberblock of class -  LIST [FUNCTION_DEFINITION]
---INFO --SYNTAX   final result  -  TYPE_DEFINITION [OBJECT, IDENTIFIER, NULL, NULL, NULL, NULL, INDENT, LIST, DEDENT]
---INFO --SYNTAX   start parsing - def  DEF
---INFO --SYNTAX   Function definition -  FUNCTION_DEFINITION [NULL, DEF, IDENTIFIER, OPEN_PAREN, SEPARATED_LIST, CLOSE_PAREN, COLON, IDENTIFIER_NAME_EXPRESSION, INDENT, LIST, DEDENT]
---INFO --SYNTAX   final result  -  FUNCTION_DEFINITION [NULL, DEF, IDENTIFIER, OPEN_PAREN, SEPARATED_LIST, CLOSE_PAREN, COLON, IDENTIFIER_NAME_EXPRESSION, INDENT, LIST, DEDENT]
+--INFO --SYNTAX   start parsing - class  IDENTIFIER
+--ERROR --SYNTAX   Unexpected token in primary: GREATER_THAN.
+--INFO --SYNTAX   Function definition -  FUNCTION_DEFINITION [NULL, DEF, IDENTIFIER, OPEN_PAREN, NULL, CLOSE_PAREN, NULL, NULL, INDENT, LIST, DEDENT]
+--INFO --SYNTAX   final result  -  TYPE_DEFINITION [CLASS, IDENTIFIER, NULL, NULL, NULL, NULL, INDENT, LIST, DEDENT]
+
+-------------AST----------
+SOURCE_TEXT 
+  LIST 
+    TYPE_DEFINITION 
+      CLASS class
+      IDENTIFIER a
+      NULL 
+      NULL 
+      NULL 
+      NULL 
+      INDENT <INDENT>
+      LIST 
+        FUNCTION_DEFINITION 
+          NULL 
+          DEF def
+          IDENTIFIER a
+          OPEN_PAREN (
+          NULL 
+          CLOSE_PAREN )
+          NULL 
+          NULL 
+          INDENT <INDENT>
+          LIST 
+            EXPRESSION_STATEMENT 
+              INVOCATION_EXPRESSION 
+                MEMBER_ACCESS_EXPRESSION 
+                  IDENTIFIER_NAME_EXPRESSION 
+                    IDENTIFIER x
+                  DOT .
+                  IDENTIFIER add
+                OPEN_PAREN (
+                SEPARATED_LIST 
+                  GREATER_THAN_EXPRESSION 
+                    INTEGER_LITERAL_EXPRESSION 
+                      INTEGER 16
+                    GREATER_THAN >
+                    INTEGER_LITERAL_EXPRESSION 
+                      INTEGER 2
+                CLOSE_PAREN )
+          DEDENT <DEDENT>
+      DEDENT <DEDENT>
