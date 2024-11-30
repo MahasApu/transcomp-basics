@@ -1,12 +1,13 @@
 package syspro.parser;
 
 import syspro.parser.ast.ASTNode;
+import syspro.parser.diagnostics.IndentationError;
+import syspro.parser.diagnostics.SyntaxError;
 import syspro.tm.lexer.IdentifierToken;
 import syspro.tm.lexer.Keyword;
 import syspro.tm.lexer.KeywordToken;
 import syspro.tm.lexer.Token;
-import syspro.tm.parser.AnySyntaxKind;
-import syspro.tm.parser.TextSpan;
+import syspro.tm.parser.*;
 import syspro.utils.Logger;
 
 import java.util.ArrayList;
@@ -22,6 +23,7 @@ public class ParserContext {
     public List<Token> tokens;
     public int pos = -1;
     private List<TextSpan> invalidRanges = new ArrayList<>();
+    private List<Diagnostic> diagnostics = new ArrayList<>();
 
     public boolean isEOF() {
         return pos >= tokens.size();
@@ -63,15 +65,69 @@ public class ParserContext {
     public void addInvalidRange() {
         int start = get().start;
         int last = getInvalidTokenEnd();
-        invalidRanges.add(new TextSpan(start, last - start));
+
+        ErrorCode error = getError();
+        TextSpan textSpan = new TextSpan(start, last - start);
+
+        invalidRanges.add(textSpan);
+        diagnostics.add(new Diagnostic(
+                new DiagnosticInfo(error, null),
+                textSpan,
+                null
+        ));
     }
 
     public void addInvalidRange(TextSpan textSpan) {
+
+        ErrorCode error = getError();
+
         invalidRanges.add(textSpan);
+        diagnostics.add(new Diagnostic(
+                new DiagnosticInfo(error, null),
+                textSpan,
+                null
+        ));
     }
 
     public void addInvalidRange(int start, int end) {
-        invalidRanges.add(new TextSpan(start, end - start));
+
+        ErrorCode error = getError();
+        TextSpan textSpan = new TextSpan(start, end - start);
+
+        invalidRanges.add(textSpan);
+        diagnostics.add(new Diagnostic(
+                new DiagnosticInfo(error, null),
+                textSpan,
+                null
+        ));
+    }
+
+
+    public void addInvalidRange(int start, int end, String msg) {
+
+        String errorKind = switch (get().toSyntaxKind()) {
+            case INDENT, DEDENT -> "IndentationError: ";
+            default -> "SyntaxError: ";
+        };
+
+        ErrorCode error = () -> errorKind + msg;
+        TextSpan textSpan = new TextSpan(start, end - start);
+
+        invalidRanges.add(textSpan);
+        diagnostics.add(new Diagnostic(
+                new DiagnosticInfo(error, null),
+                textSpan,
+                null
+        ));
+    }
+
+    private ErrorCode getError() {
+        return switch (get().toSyntaxKind()) {
+            case INDENT, DEDENT -> new IndentationError("expected indentation.");
+            case IDENTIFIER -> new SyntaxError("invalid name.");
+            default -> new SyntaxError("unexpected token.");
+        };
+
     }
 
     public Token step() {
@@ -89,6 +145,26 @@ public class ParserContext {
             if (is(kind))
                 return new ASTNode(kind, step());
         }
+
+        int start = get().start;
+        int last = get().end;
+
+        String errorKind = switch (kinds[0]) {
+            case INDENT, DEDENT -> "IndentationError: ";
+            default -> "SyntaxError: ";
+        };
+
+        Token cur = get();
+        ErrorCode error = () -> errorKind + msg +
+                " Found: " + cur.toString() + ". Invalid length: " + (last - start);
+        TextSpan textSpan = new TextSpan(start, last - start);
+
+        invalidRanges.add(textSpan);
+        diagnostics.add(new Diagnostic(
+                new DiagnosticInfo(error, null),
+                textSpan,
+                null
+        ));
         return null;
     }
 
@@ -152,4 +228,9 @@ public class ParserContext {
             default -> false;
         };
     }
+
+    public List<Diagnostic> getDiagnostics() {
+        return diagnostics;
+    }
+
 }

@@ -32,6 +32,6 @@ public class SysproParseResult implements ParseResult {
 
     @Override
     public Collection<Diagnostic> diagnostics() {
-        return List.of();
+        return diagnostics;
     }
 }
