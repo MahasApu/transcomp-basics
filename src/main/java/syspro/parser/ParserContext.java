@@ -41,7 +41,7 @@ public class ParserContext {
     }
 
     public AnySyntaxKind kind() {
-        assert !isEOF();
+        if (isEOF()) return null;
         return get().toSyntaxKind();
     }
 
@@ -56,12 +56,22 @@ public class ParserContext {
     }
 
     public Token get() {
-        if (isEOF()) return null;
+        if (isEOF()) return prev();
         return tokens.get(pos);
+    }
+
+    public void addInvalidRange() {
+        int start = get().start;
+        int last = getInvalidTokenEnd();
+        invalidRanges.add(new TextSpan(start, last - start));
     }
 
     public void addInvalidRange(TextSpan textSpan) {
         invalidRanges.add(textSpan);
+    }
+
+    public void addInvalidRange(int start, int end) {
+        invalidRanges.add(new TextSpan(start, end - start));
     }
 
     public Token step() {
@@ -102,12 +112,14 @@ public class ParserContext {
 
         while (!isEOF() && !kind().equals(kind))
             step();
+        if (isEOF()) pos--;
 
         return pos - start;
     }
 
     public int getInvalidTokenEnd() {
         getInvalidEnd();
+        if (isEOF()) return prev().end;
         return get().end;
     }
 
@@ -132,8 +144,8 @@ public class ParserContext {
 
 
     public boolean statementStarts() {
+        if (isEOF()) return false;
         if (typeDefinitionStarts()) return false;
-
         return switch (kind()) {
             case THIS, SUPER, IDENTIFIER, VAL, VAR,
                  BREAK, RETURN, CONTINUE, IF, WHILE, FOR -> true;
