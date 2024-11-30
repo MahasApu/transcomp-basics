@@ -86,6 +86,10 @@ public class Lexer implements syspro.tm.lexer.Lexer {
 
         switch (ctx.symbolBuffer.toString()) {
             case ">" -> {
+                if (ctx.lessThanCounter > 0) {
+                    ctx.lessThanCounter--;
+                    break;
+                }
                 if (ctx.isNext("=")) lexeme = ">=";
                 else if (ctx.isNext(">")) lexeme = ">>";
             }
@@ -93,6 +97,7 @@ public class Lexer implements syspro.tm.lexer.Lexer {
                 if (ctx.isNext("=")) lexeme = "<=";
                 else if (ctx.isNext("<")) lexeme = "<<";
                 else if (ctx.isNext(":")) lexeme = "<:";
+                else if (!ctx.isNext(" ")) ctx.lessThanCounter++;
             }
             case "=" -> {
                 if (ctx.isNext("=")) lexeme = "==";
@@ -266,6 +271,7 @@ public class Lexer implements syspro.tm.lexer.Lexer {
                 }
                 case "\n" -> {
                     ctx.putTrivia();
+                    ctx.lessThanCounter = 0;
                     ctx.curState = INDENTATION;
                     calculateIndentation(ctx);
                 }

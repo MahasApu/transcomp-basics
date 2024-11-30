@@ -26,6 +26,7 @@ public class LexerContext {
     public int[] codePoints;
     public StringBuilder symbolBuffer;
     public ArrayList<Token> tokens;
+    public int lessThanCounter;
 
     public State.ObservedState curState;
 

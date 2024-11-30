@@ -128,4 +128,46 @@ public class Logger {
             throw new RuntimeException(e);
         }
     }
+
+    public void printTree(SyntaxNode head, boolean includeSelf) {
+        try {
+            writer.write(String.format("\n-------------AST----------\n"));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        printTreeRecursive(head, 0, includeSelf);
+    }
+
+    // Helper recursive method to print the tree
+    private void printTreeRecursive(SyntaxNode node, int depth, boolean includeSelf) {
+
+
+        // Print current node with indentation based on depth
+        String indent = " ".repeat(depth * 2);  // 2 spaces per depth level
+        try {
+            AnySyntaxKind kind = NULL;
+            String info = " ";
+            if (node != null) kind = node.kind();
+            if (node != null && node.token() != null) info += node.token().toString();
+            writer.write(indent + kind + info + "\n");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        if (node == null) return;
+
+        if (includeSelf) {
+            for (int i = 0; i < node.slotCount(); i++) {
+                var child = node.slot(i);
+                printTreeRecursive(child, depth + 1, includeSelf);
+
+            }
+        } else {
+            for (int i = node.slotCount() - 1; i >= 0; i--) {
+                var child = node.slot(i);
+                printTreeRecursive(child, depth + 1, includeSelf);
+
+            }
+        }
+    }
 }
