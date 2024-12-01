@@ -68,7 +68,7 @@ public class Parser implements syspro.tm.parser.Parser {
         ASTNode terminalList = parseTerminalList(ctx, ABSTRACT, VIRTUAL, OVERRIDE, NATIVE);
         ASTNode def = ctx.expected("Expected DEF keyword in func definition.", DEF);
 
-        ASTNode functionName = ctx.expected("Expected function name in func definition.", IDENTIFIER);
+        ASTNode functionName = ctx.expected("Expected function name in func definition.", IDENTIFIER, THIS);
         // add panic mode
         if (isNull(functionName)) {
             functionName = new ASTNode(IDENTIFIER, ctx.get());
@@ -104,7 +104,7 @@ public class Parser implements syspro.tm.parser.Parser {
 
         }
 
-        if (ctx.statementStarts()) ctx.addInvalidRange();
+        if (ctx.statementStarts()) ctx.addInvalidRange("IndentationError: incorrect indentation in line ");
 
         ASTNode node = new ASTNode(FUNCTION_DEFINITION, null, terminalList, def,
                 functionName, openParen, parameterList, closeParen,
@@ -172,7 +172,7 @@ public class Parser implements syspro.tm.parser.Parser {
                 ctx.addInvalidRange();
 
         } else if (ctx.statementStarts() || ctx.definitionStarts())
-            ctx.addInvalidRange();
+            ctx.addInvalidRange("IndentationError: incorrect indentation in line ");
 
         ctx.pos--;
         return new ASTNode(TYPE_DEFINITION, null, keyword, name, lessThan,
@@ -239,7 +239,7 @@ public class Parser implements syspro.tm.parser.Parser {
         if (ctx.match(LESS_THAN)) {
             lessThan = new ASTNode(LESS_THAN, ctx.prev());
             typeArguments = parseSeparatedList(this::parseNameExpression, COMMA, ctx);
-            greaterThan = ctx.expected("Expected > in generic name.", GREATER_THAN);
+            greaterThan = ctx.match(GREATER_THAN) ? new ASTNode(GREATER_THAN_EXPRESSION, ctx.prev()) : null;
         }
 
         if (isNull(lessThan) != isNull(greaterThan)) {
@@ -288,7 +288,7 @@ public class Parser implements syspro.tm.parser.Parser {
         return switch (ctx.prev().toSyntaxKind()) {
             case BAD -> {
                 Token t = ctx.prev();
-                ctx.addInvalidRange(new TextSpan(t.start + t.leadingTriviaLength, t.end - t.start));
+                ctx.addInvalidRange(t.start + t.leadingTriviaLength, t.end + t.leadingTriviaLength, "SyntaxError: invalid token in line ");
                 yield value;
             }
             case THIS -> new ASTNode(THIS_EXPRESSION, null, value);
@@ -657,7 +657,7 @@ public class Parser implements syspro.tm.parser.Parser {
         List<Token> tokens = lexer.lex(s);
 
         Logger logger = new Logger(Logger.Stage.LEXICAL);
-        ParserContext ctx = new ParserContext(tokens, logger);
+        ParserContext ctx = new ParserContext(tokens, logger, s);
 
         for (Token t : tokens) ctx.logger.info(t, "Token added - ");
 
@@ -668,6 +668,8 @@ public class Parser implements syspro.tm.parser.Parser {
         ctx.logger.printTree(new ASTNode(SOURCE_TEXT, null, new ASTNode(LIST, null, statements)), true);
 
         ctx.logger.close();
+
+        ctx.getDiagnostics().forEach(d -> System.out.println(d.info().errorCode().name()));
 
         return new SysproParseResult(new ASTNode(SOURCE_TEXT, null, new ASTNode(LIST, null, statements)),
                 ctx.getInvalidRanges(), ctx.getDiagnostics());

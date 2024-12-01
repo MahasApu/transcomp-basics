@@ -25,13 +25,20 @@ public class ParserContext {
     private List<TextSpan> invalidRanges = new ArrayList<>();
     private List<Diagnostic> diagnostics = new ArrayList<>();
 
+
+    // variables for diagnostics
+    private int lineInText = 1;
+    private int lastTextPos = -1;
+    private final String inputText;
+
     public boolean isEOF() {
         return pos >= tokens.size();
     }
 
-    ParserContext(List<Token> tokens, Logger logger) {
+    ParserContext(List<Token> tokens, Logger logger, String inputText) {
         this.logger = logger;
         this.tokens = tokens;
+        this.inputText = inputText;
     }
 
     public boolean is(AnySyntaxKind... kind) {
@@ -63,10 +70,11 @@ public class ParserContext {
     }
 
     public void addInvalidRange() {
+        ErrorCode error = getError();
+
         int start = get().start;
         int last = getInvalidTokenEnd();
 
-        ErrorCode error = getError();
         TextSpan textSpan = new TextSpan(start, last - start);
 
         invalidRanges.add(textSpan);
@@ -80,7 +88,6 @@ public class ParserContext {
     public void addInvalidRange(TextSpan textSpan) {
 
         ErrorCode error = getError();
-
         invalidRanges.add(textSpan);
         diagnostics.add(new Diagnostic(
                 new DiagnosticInfo(error, null),
@@ -105,13 +112,31 @@ public class ParserContext {
 
     public void addInvalidRange(int start, int end, String msg) {
 
-        String errorKind = switch (get().toSyntaxKind()) {
-            case INDENT, DEDENT -> "IndentationError: ";
-            default -> "SyntaxError: ";
-        };
-
-        ErrorCode error = () -> errorKind + msg;
         TextSpan textSpan = new TextSpan(start, end - start);
+
+        getLineNumber();
+        ErrorCode error = () -> msg + lineInText ;
+
+        invalidRanges.add(textSpan);
+        diagnostics.add(new Diagnostic(
+                new DiagnosticInfo(error, null),
+                textSpan,
+                null
+        ));
+    }
+
+    public void addInvalidRange(String msg) {
+
+        step();
+        getLineNumber();
+        pos--;
+        ErrorCode error = () -> msg + (lineInText);
+
+        int start = get().start;
+        int last = getInvalidTokenEnd();
+
+        TextSpan textSpan = new TextSpan(start, last - start);
+
 
         invalidRanges.add(textSpan);
         diagnostics.add(new Diagnostic(
@@ -122,10 +147,13 @@ public class ParserContext {
     }
 
     private ErrorCode getError() {
+
+
         return switch (get().toSyntaxKind()) {
-            case INDENT, DEDENT -> new IndentationError("expected indentation.");
-            case IDENTIFIER -> new SyntaxError("invalid name.");
-            default -> new SyntaxError("unexpected token.");
+            case DEF -> new IndentationError("incorrect indentation in line " + (getLineNumber() + 1) + ".");
+            case INDENT, DEDENT -> new IndentationError("unexpected indentation in line " + (getLineNumber() + 1) + ".");
+            case IDENTIFIER -> new SyntaxError("invalid name in line " + getLineNumber() + ".");
+            default -> new SyntaxError("unexpected token: " + get().toString() + ". In line " + getLineNumber() + ".");
         };
 
     }
@@ -139,6 +167,15 @@ public class ParserContext {
         return tokens.get(pos - 1);
     }
 
+    private int getLineNumber() {
+        int end = get().start;
+        while (++lastTextPos < end) {
+            if (inputText.charAt(lastTextPos) == '\n')
+                lineInText++;
+        }
+        return lineInText;
+
+    }
 
     public ASTNode expected(String msg, AnySyntaxKind... kinds) {
         for (AnySyntaxKind kind : kinds) {
@@ -156,7 +193,7 @@ public class ParserContext {
 
         Token cur = get();
         ErrorCode error = () -> errorKind + msg +
-                " Found: " + cur.toString() + ". Invalid length: " + (last - start);
+                " Found: " + cur.toString() + ". In line " + getLineNumber() + ".";
         TextSpan textSpan = new TextSpan(start, last - start);
 
         invalidRanges.add(textSpan);
