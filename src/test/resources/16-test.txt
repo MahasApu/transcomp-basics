@@ -1,0 +1,18 @@
+class Operator<T>
+  abstract def apply(arg: T): T
+
+class IncrementOperator <: Operator<UInt64>
+  override def apply(arg: UInt64): UInt64
+    return arg + 1
+
+class DecrementOperator <: Operator<Int64>
+  override def apply(arg: Int64): Int64
+    return arg - 1
+
+class Test
+  def operators(x: UInt64, y: Int64): Boolean
+    if x + 1 != IncrementOperator().apply(x)
+      return false
+    if y - 1 != DecrementOperator().apply(x)
+      return false
+    return true

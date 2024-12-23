@@ -140,10 +140,7 @@ public class Logger {
 
     // Helper recursive method to print the tree
     private void printTreeRecursive(SyntaxNode node, int depth, boolean includeSelf) {
-
-
-        // Print current node with indentation based on depth
-        String indent = " ".repeat(depth * 2);  // 2 spaces per depth level
+        String indent = " ".repeat(depth * 2);
         try {
             AnySyntaxKind kind = NULL;
             String info = " ";

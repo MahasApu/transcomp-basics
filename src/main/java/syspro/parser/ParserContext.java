@@ -85,16 +85,6 @@ public class ParserContext {
         ));
     }
 
-    public void addInvalidRange(TextSpan textSpan) {
-
-        ErrorCode error = getError();
-        invalidRanges.add(textSpan);
-        diagnostics.add(new Diagnostic(
-                new DiagnosticInfo(error, null),
-                textSpan,
-                null
-        ));
-    }
 
     public void addInvalidRange(int start, int end) {
 
@@ -114,8 +104,8 @@ public class ParserContext {
 
         TextSpan textSpan = new TextSpan(start, end - start);
 
-        getLineNumber();
-        ErrorCode error = () -> msg + lineInText ;
+        int lineNum = getLineNumber();
+        ErrorCode error = () -> (msg + " in line " + lineNum + ".");
 
         invalidRanges.add(textSpan);
         diagnostics.add(new Diagnostic(
@@ -128,9 +118,9 @@ public class ParserContext {
     public void addInvalidRange(String msg) {
 
         step();
-        getLineNumber();
+        int lineNum = getLineNumber();
         pos--;
-        ErrorCode error = () -> msg + (lineInText);
+        ErrorCode error = () -> msg + lineNum + ".";
 
         int start = get().start;
         int last = getInvalidTokenEnd();
@@ -147,8 +137,6 @@ public class ParserContext {
     }
 
     private ErrorCode getError() {
-
-
         return switch (get().toSyntaxKind()) {
             case DEF -> new IndentationError("incorrect indentation in line " + (getLineNumber() + 1) + ".");
             case INDENT, DEDENT -> new IndentationError("unexpected indentation in line " + (getLineNumber() + 1) + ".");
@@ -192,8 +180,9 @@ public class ParserContext {
         };
 
         Token cur = get();
+        int lineNum = getLineNumber();
         ErrorCode error = () -> errorKind + msg +
-                " Found: " + cur.toString() + ". In line " + getLineNumber() + ".";
+                " Found: " + cur.toString() + ". In line " + lineNum + ".";
         TextSpan textSpan = new TextSpan(start, last - start);
 
         invalidRanges.add(textSpan);

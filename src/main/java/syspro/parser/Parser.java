@@ -6,7 +6,6 @@ import syspro.tm.lexer.Keyword;
 import syspro.tm.lexer.Token;
 import syspro.tm.parser.AnySyntaxKind;
 import syspro.tm.parser.ParseResult;
-import syspro.tm.parser.TextSpan;
 import syspro.utils.Logger;
 
 import java.util.ArrayList;
@@ -28,15 +27,13 @@ public class Parser implements syspro.tm.parser.Parser {
             ASTNode statement = parseDefinition(ctx);
             if (isNull(statement)) ctx.logger.info(NULL, "final result - ");
             else ctx.logger.info(statement, "final result  - ");
-
             if (!isNull(statement)) statements.add(statement);
         }
         return statements;
     }
 
     private ASTNode parseDefinition(ParserContext ctx) {
-        if (ctx.get().toString().equals("class") || ctx.get().toString().equals("object")
-                || ctx.get().toString().equals("interface")) return parseTypeDefinition(ctx);
+        if (ctx.typeDefinitionStarts()) return parseTypeDefinition(ctx);
         return null;
     }
 
@@ -229,7 +226,7 @@ public class Parser implements syspro.tm.parser.Parser {
             return new ASTNode(OPTION_NAME_EXPRESSION, ctx.get(), question, innerExpr);
         }
 
-        ASTNode name = ctx.expected("Expected name in name expression", IDENTIFIER);
+        ASTNode name = !ctx.is(INTEGER) ? ctx.expected("Expected name in name expression", IDENTIFIER) : null ;
         int resetPos = ctx.pos;
 
         ASTNode typeArguments = null;
@@ -288,7 +285,7 @@ public class Parser implements syspro.tm.parser.Parser {
         return switch (ctx.prev().toSyntaxKind()) {
             case BAD -> {
                 Token t = ctx.prev();
-                ctx.addInvalidRange(t.start + t.leadingTriviaLength, t.end + t.leadingTriviaLength, "SyntaxError: invalid token in line ");
+                ctx.addInvalidRange(t.start + t.leadingTriviaLength, t.end + t.leadingTriviaLength, "SyntaxError: invalid token");
                 yield value;
             }
             case THIS -> new ASTNode(THIS_EXPRESSION, null, value);
@@ -319,7 +316,7 @@ public class Parser implements syspro.tm.parser.Parser {
                         String.format("Unexpected token in primary: %s.", value.kind()));
                 ctx.pos--;
                 ctx.addInvalidRange(ctx.get().start, ctx.get().end,
-                        String.format("Unexpected token: %s.", value.token().toString()));
+                        String.format("SyntaxError: Unexpected token: %s.", value.token().toString()));
                 yield null;
             }
 

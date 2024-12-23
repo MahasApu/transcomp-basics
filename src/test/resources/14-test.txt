@@ -1,0 +1,7 @@
+class Clash2
+  def apply(arg: Int64): Boolean
+    return true
+  def apply(arg: UInt64): Boolean
+    return true
+  def apply(arg: UInt64, v: Rune): Boolean
+    return false # Doesn't clash with other overloads
