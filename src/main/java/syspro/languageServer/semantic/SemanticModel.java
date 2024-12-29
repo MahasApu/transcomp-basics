@@ -1,4 +1,4 @@
-package syspro.languageServer;
+package syspro.languageServer.semantic;
 
 import syspro.tm.parser.Diagnostic;
 import syspro.tm.parser.SyntaxNode;

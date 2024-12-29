@@ -106,6 +106,9 @@ public class Lexer implements syspro.tm.lexer.Lexer {
             case "&" -> {
                 if (ctx.isNext("&")) lexeme = "&";
             }
+            case "!" -> {
+                if (ctx.isNext("=")) lexeme = "!=";
+            }
             default -> {
                 if (!symbolMap.containsKey(lexeme)) return null;
             }

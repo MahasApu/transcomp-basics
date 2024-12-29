@@ -1,9 +1,12 @@
 package syspro;
 
 import syspro.languageServer.LanguageServer;
+import syspro.lexer.Lexer;
 import syspro.parser.Parser;
 import syspro.tm.Tasks;
 import syspro.tm.WebServer;
+import syspro.tm.lexer.TestLineTerminators;
+import syspro.tm.lexer.TestMode;
 
 import java.io.IOException;
 

@@ -274,9 +274,19 @@ class LexerTest {
     @Test
     void objectGenericsTest() throws IOException {
         String strTest = """
-class Bad2
-    val x = 
-    val y = 42""";
+                class ArrayListIterator<T>
+                    val _list: ArrayList<T>
+                    var _index: UInt64 = 0
+                    def this(list: ArrayList<T>)
+                        this._list = list
+                    def hasNext(): Boolean
+                        return _index < _list.length
+                    def next(): T
+                        if !hasNext()
+                            System.failFast("No next element is available in ArrayList<T>")
+                        val result = _list[_index] # Will failFast if necessary
+                        _index = _index + 1u64
+                        return result""";
 
         Parser parser = new Parser();
         parser.parse(strTest);
@@ -285,22 +295,25 @@ class Bad2
     @Test
     void factorialTest() throws IOException {
         String strTest = """
-                object Factorial
-                
-                  def iterative(n: Int64): Int64
-                    var result = 1
-                    for i in Range<UInt64>(1, n + 1)
-                      result = result * i
-                    return result
-                
-                  def recursive(n: Int64): Int64
-                    if n > 1
-                      return n * recursive(n - 1)
-                    return 1
-                """;
+class a
+  def a()
+    val x = ArrayList<ArrayList<Int64>>()
+    x.add(16 > > 2)
+           
+    """;
 
+        String strTest2 = """
+class a
+  def a()
+    if 128u64 << 1 > 4
+      x.add(16 > > 2)
+    if c < 2048u32
+      x.add(c)
+           
+    """;
         Parser parser = new Parser();
-        parser.parse(strTest);
+        parser.parse(strTest2);
+
     }
 }
 
