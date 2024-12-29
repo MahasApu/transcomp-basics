@@ -9,19 +9,31 @@ import java.util.Collection;
 import java.util.List;
 
 public class SemanticModel implements syspro.tm.symbols.SemanticModel {
+
+
+    public SyntaxNode root;
+    public Collection<TextSpan> invalidRanges;
+    Collection<Diagnostic> diagnostics;
+
+    public SemanticModel(SyntaxNode root, Collection<TextSpan> invalidRanges, Collection<Diagnostic> diagnostics) {
+        this.root = root;
+        this.invalidRanges = invalidRanges;
+        this.diagnostics = diagnostics;
+    }
+
     @Override
     public SyntaxNode root() {
-        return null;
+        return root;
     }
 
     @Override
     public Collection<TextSpan> invalidRanges() {
-        return List.of();
+        return invalidRanges;
     }
 
     @Override
     public Collection<Diagnostic> diagnostics() {
-        return List.of();
+        return diagnostics;
     }
 
     @Override

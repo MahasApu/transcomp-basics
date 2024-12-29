@@ -1,221 +1,146 @@
 
 -------------LEXICAL----------
---INFO --LEXICAL   Token added - class                0     <0 4>      0         
---INFO --LEXICAL   Token added - Operator             1     <6 13>     0         
---INFO --LEXICAL   Token added - <                    0     <14 14>    0         
---INFO --LEXICAL   Token added - T                    0     <15 15>    0         
---INFO --LEXICAL   Token added - >                    0     <16 16>    0         
---INFO --LEXICAL   Token added - <INDENT>             0     <17 18>    0         
---INFO --LEXICAL   Token added - abstract             4     <21 28>    0         
---INFO --LEXICAL   Token added - def                  1     <30 32>    0         
---INFO --LEXICAL   Token added - apply                1     <34 38>    0         
---INFO --LEXICAL   Token added - (                    0     <39 39>    0         
---INFO --LEXICAL   Token added - arg                  0     <40 42>    0         
---INFO --LEXICAL   Token added - :                    0     <43 43>    0         
---INFO --LEXICAL   Token added - T                    1     <45 45>    0         
---INFO --LEXICAL   Token added - )                    0     <46 46>    0         
---INFO --LEXICAL   Token added - :                    0     <47 47>    0         
---INFO --LEXICAL   Token added - T                    1     <49 49>    0         
---INFO --LEXICAL   Token added - <DEDENT>             0     <52 53>    0         
---INFO --LEXICAL   Token added - class                4     <54 58>    0         
---INFO --LEXICAL   Token added - IncrementOperator    1     <60 76>    0         
---INFO --LEXICAL   Token added - <:                   1     <78 79>    0         
---INFO --LEXICAL   Token added - Operator             1     <81 88>    0         
---INFO --LEXICAL   Token added - <                    0     <89 89>    0         
---INFO --LEXICAL   Token added - UInt64               0     <90 95>    0         
---INFO --LEXICAL   Token added - >                    0     <96 96>    0         
---INFO --LEXICAL   Token added - <INDENT>             0     <97 98>    0         
---INFO --LEXICAL   Token added - override             4     <101 108>  0         
---INFO --LEXICAL   Token added - def                  1     <110 112>  0         
---INFO --LEXICAL   Token added - apply                1     <114 118>  0         
---INFO --LEXICAL   Token added - (                    0     <119 119>  0         
---INFO --LEXICAL   Token added - arg                  0     <120 122>  0         
---INFO --LEXICAL   Token added - :                    0     <123 123>  0         
---INFO --LEXICAL   Token added - UInt64               1     <125 130>  0         
---INFO --LEXICAL   Token added - )                    0     <131 131>  0         
---INFO --LEXICAL   Token added - :                    0     <132 132>  0         
---INFO --LEXICAL   Token added - UInt64               1     <134 139>  0         
---INFO --LEXICAL   Token added - <INDENT>             0     <140 141>  0         
---INFO --LEXICAL   Token added - return               6     <146 151>  0         
---INFO --LEXICAL   Token added - arg                  1     <153 155>  0         
---INFO --LEXICAL   Token added - +                    1     <157 157>  0         
---INFO --LEXICAL   Token added - 1                    1     <159 159>  0         
---INFO --LEXICAL   Token added - <DEDENT>             0     <162 163>  0         
---INFO --LEXICAL   Token added - <DEDENT>             0     <162 163>  0         
---INFO --LEXICAL   Token added - class                4     <164 168>  0         
---INFO --LEXICAL   Token added - DecrementOperator    1     <170 186>  0         
---INFO --LEXICAL   Token added - <:                   1     <188 189>  0         
---INFO --LEXICAL   Token added - Operator             1     <191 198>  0         
---INFO --LEXICAL   Token added - <                    0     <199 199>  0         
---INFO --LEXICAL   Token added - Int64                0     <200 204>  0         
---INFO --LEXICAL   Token added - >                    0     <205 205>  0         
---INFO --LEXICAL   Token added - <INDENT>             0     <206 207>  0         
---INFO --LEXICAL   Token added - override             4     <210 217>  0         
---INFO --LEXICAL   Token added - def                  1     <219 221>  0         
---INFO --LEXICAL   Token added - apply                1     <223 227>  0         
---INFO --LEXICAL   Token added - (                    0     <228 228>  0         
---INFO --LEXICAL   Token added - arg                  0     <229 231>  0         
---INFO --LEXICAL   Token added - :                    0     <232 232>  0         
---INFO --LEXICAL   Token added - Int64                1     <234 238>  0         
---INFO --LEXICAL   Token added - )                    0     <239 239>  0         
---INFO --LEXICAL   Token added - :                    0     <240 240>  0         
---INFO --LEXICAL   Token added - Int64                1     <242 246>  0         
---INFO --LEXICAL   Token added - <INDENT>             0     <247 248>  0         
---INFO --LEXICAL   Token added - return               6     <253 258>  0         
---INFO --LEXICAL   Token added - arg                  1     <260 262>  0         
---INFO --LEXICAL   Token added - -                    1     <264 264>  0         
---INFO --LEXICAL   Token added - 1                    1     <266 266>  0         
---INFO --LEXICAL   Token added - <DEDENT>             0     <269 270>  0         
---INFO --LEXICAL   Token added - <DEDENT>             0     <269 270>  0         
---INFO --LEXICAL   Token added - class                4     <271 275>  0         
---INFO --LEXICAL   Token added - Test                 1     <277 280>  0         
---INFO --LEXICAL   Token added - <INDENT>             0     <281 282>  0         
---INFO --LEXICAL   Token added - def                  4     <285 287>  0         
---INFO --LEXICAL   Token added - operators            1     <289 297>  0         
---INFO --LEXICAL   Token added - (                    0     <298 298>  0         
---INFO --LEXICAL   Token added - x                    0     <299 299>  0         
---INFO --LEXICAL   Token added - :                    0     <300 300>  0         
---INFO --LEXICAL   Token added - UInt64               1     <302 307>  0         
---INFO --LEXICAL   Token added - ,                    0     <308 308>  0         
---INFO --LEXICAL   Token added - y                    1     <310 310>  0         
---INFO --LEXICAL   Token added - :                    0     <311 311>  0         
---INFO --LEXICAL   Token added - Int64                1     <313 317>  0         
---INFO --LEXICAL   Token added - )                    0     <318 318>  0         
---INFO --LEXICAL   Token added - :                    0     <319 319>  0         
---INFO --LEXICAL   Token added - Boolean              1     <321 327>  0         
---INFO --LEXICAL   Token added - <INDENT>             0     <328 329>  0         
---INFO --LEXICAL   Token added - if                   6     <334 335>  0         
---INFO --LEXICAL   Token added - x                    1     <337 337>  0         
---INFO --LEXICAL   Token added - +                    1     <339 339>  0         
---INFO --LEXICAL   Token added - 1                    1     <341 341>  0         
---INFO --LEXICAL   Token added - !                    1     <343 343>  0         
---INFO --LEXICAL   Token added - =                    0     <344 344>  0         
---INFO --LEXICAL   Token added - IncrementOperator    1     <346 362>  0         
---INFO --LEXICAL   Token added - (                    0     <363 363>  0         
---INFO --LEXICAL   Token added - )                    0     <364 364>  0         
---INFO --LEXICAL   Token added - .                    0     <365 365>  0         
---INFO --LEXICAL   Token added - apply                0     <366 370>  0         
---INFO --LEXICAL   Token added - (                    0     <371 371>  0         
---INFO --LEXICAL   Token added - x                    0     <372 372>  0         
---INFO --LEXICAL   Token added - )                    0     <373 373>  0         
---INFO --LEXICAL   Token added - <INDENT>             0     <374 375>  0         
---INFO --LEXICAL   Token added - return               8     <382 387>  0         
---INFO --LEXICAL   Token added - false                1     <389 393>  0         
---INFO --LEXICAL   Token added - <DEDENT>             0     <394 395>  0         
---INFO --LEXICAL   Token added - if                   6     <400 401>  0         
---INFO --LEXICAL   Token added - y                    1     <403 403>  0         
---INFO --LEXICAL   Token added - -                    1     <405 405>  0         
---INFO --LEXICAL   Token added - 1                    1     <407 407>  0         
---INFO --LEXICAL   Token added - !                    1     <409 409>  0         
---INFO --LEXICAL   Token added - =                    0     <410 410>  0         
---INFO --LEXICAL   Token added - DecrementOperator    1     <412 428>  0         
---INFO --LEXICAL   Token added - (                    0     <429 429>  0         
---INFO --LEXICAL   Token added - )                    0     <430 430>  0         
---INFO --LEXICAL   Token added - .                    0     <431 431>  0         
---INFO --LEXICAL   Token added - apply                0     <432 436>  0         
---INFO --LEXICAL   Token added - (                    0     <437 437>  0         
---INFO --LEXICAL   Token added - x                    0     <438 438>  0         
---INFO --LEXICAL   Token added - )                    0     <439 439>  0         
---INFO --LEXICAL   Token added - <INDENT>             0     <440 441>  0         
---INFO --LEXICAL   Token added - return               8     <448 453>  0         
---INFO --LEXICAL   Token added - false                1     <455 459>  0         
---INFO --LEXICAL   Token added - <DEDENT>             0     <460 461>  0         
---INFO --LEXICAL   Token added - return               6     <466 471>  0         
---INFO --LEXICAL   Token added - true                 1     <473 476>  2         
---INFO --LEXICAL   Token added - <DEDENT>             0     <477 478>  0         
---INFO --LEXICAL   Token added - <DEDENT>             0     <477 478>  0         
+--INFO --LEXICAL   Token added - interface            0     <0 8>      0         
+--INFO --LEXICAL   Token added - Operator             1     <10 17>    0         
+--INFO --LEXICAL   Token added - <                    0     <18 18>    0         
+--INFO --LEXICAL   Token added - T                    0     <19 19>    0         
+--INFO --LEXICAL   Token added - >                    0     <20 20>    0         
+--INFO --LEXICAL   Token added - <INDENT>             0     <21 22>    0         
+--INFO --LEXICAL   Token added - def                  4     <25 27>    0         
+--INFO --LEXICAL   Token added - apply                1     <29 33>    0         
+--INFO --LEXICAL   Token added - (                    0     <34 34>    0         
+--INFO --LEXICAL   Token added - arg                  0     <35 37>    0         
+--INFO --LEXICAL   Token added - :                    0     <38 38>    0         
+--INFO --LEXICAL   Token added - T                    1     <40 40>    0         
+--INFO --LEXICAL   Token added - )                    0     <41 41>    0         
+--INFO --LEXICAL   Token added - :                    0     <42 42>    0         
+--INFO --LEXICAL   Token added - T                    1     <44 44>    0         
+--INFO --LEXICAL   Token added - <DEDENT>             0     <47 48>    0         
+--INFO --LEXICAL   Token added - class                4     <49 53>    0         
+--INFO --LEXICAL   Token added - IncrementOperator    1     <55 71>    0         
+--INFO --LEXICAL   Token added - <:                   1     <73 74>    0         
+--INFO --LEXICAL   Token added - Operator             1     <76 83>    0         
+--INFO --LEXICAL   Token added - <                    0     <84 84>    0         
+--INFO --LEXICAL   Token added - UInt64               0     <85 90>    0         
+--INFO --LEXICAL   Token added - >                    0     <91 91>    0         
+--INFO --LEXICAL   Token added - <INDENT>             0     <92 93>    0         
+--INFO --LEXICAL   Token added - override             4     <96 103>   0         
+--INFO --LEXICAL   Token added - def                  1     <105 107>  0         
+--INFO --LEXICAL   Token added - apply                1     <109 113>  0         
+--INFO --LEXICAL   Token added - (                    0     <114 114>  0         
+--INFO --LEXICAL   Token added - arg                  0     <115 117>  0         
+--INFO --LEXICAL   Token added - :                    0     <118 118>  0         
+--INFO --LEXICAL   Token added - UInt64               1     <120 125>  0         
+--INFO --LEXICAL   Token added - )                    0     <126 126>  0         
+--INFO --LEXICAL   Token added - :                    0     <127 127>  0         
+--INFO --LEXICAL   Token added - UInt64               1     <129 134>  0         
+--INFO --LEXICAL   Token added - <INDENT>             0     <135 136>  0         
+--INFO --LEXICAL   Token added - return               6     <141 146>  0         
+--INFO --LEXICAL   Token added - arg                  1     <148 150>  0         
+--INFO --LEXICAL   Token added - +                    1     <152 152>  0         
+--INFO --LEXICAL   Token added - 1                    1     <154 154>  0         
+--INFO --LEXICAL   Token added - <DEDENT>             0     <157 158>  0         
+--INFO --LEXICAL   Token added - <DEDENT>             0     <157 158>  0         
+--INFO --LEXICAL   Token added - class                4     <159 163>  0         
+--INFO --LEXICAL   Token added - DecrementOperator    1     <165 181>  0         
+--INFO --LEXICAL   Token added - <:                   1     <183 184>  0         
+--INFO --LEXICAL   Token added - Operator             1     <186 193>  0         
+--INFO --LEXICAL   Token added - <                    0     <194 194>  0         
+--INFO --LEXICAL   Token added - Int64                0     <195 199>  0         
+--INFO --LEXICAL   Token added - >                    0     <200 200>  0         
+--INFO --LEXICAL   Token added - <INDENT>             0     <201 202>  0         
+--INFO --LEXICAL   Token added - override             4     <205 212>  0         
+--INFO --LEXICAL   Token added - def                  1     <214 216>  0         
+--INFO --LEXICAL   Token added - apply                1     <218 222>  0         
+--INFO --LEXICAL   Token added - (                    0     <223 223>  0         
+--INFO --LEXICAL   Token added - arg                  0     <224 226>  0         
+--INFO --LEXICAL   Token added - :                    0     <227 227>  0         
+--INFO --LEXICAL   Token added - Int64                1     <229 233>  0         
+--INFO --LEXICAL   Token added - )                    0     <234 234>  0         
+--INFO --LEXICAL   Token added - :                    0     <235 235>  0         
+--INFO --LEXICAL   Token added - Int64                1     <237 241>  0         
+--INFO --LEXICAL   Token added - <INDENT>             0     <242 243>  0         
+--INFO --LEXICAL   Token added - return               6     <248 253>  0         
+--INFO --LEXICAL   Token added - arg                  1     <255 257>  0         
+--INFO --LEXICAL   Token added - -                    1     <259 259>  0         
+--INFO --LEXICAL   Token added - 1                    1     <261 261>  0         
+--INFO --LEXICAL   Token added - <DEDENT>             0     <264 265>  0         
+--INFO --LEXICAL   Token added - <DEDENT>             0     <264 265>  0         
+--INFO --LEXICAL   Token added - class                4     <266 270>  0         
+--INFO --LEXICAL   Token added - Test                 1     <272 275>  0         
+--INFO --LEXICAL   Token added - <INDENT>             0     <276 277>  0         
+--INFO --LEXICAL   Token added - def                  4     <280 282>  0         
+--INFO --LEXICAL   Token added - operators            1     <284 292>  0         
+--INFO --LEXICAL   Token added - (                    0     <293 293>  0         
+--INFO --LEXICAL   Token added - x                    0     <294 294>  0         
+--INFO --LEXICAL   Token added - :                    0     <295 295>  0         
+--INFO --LEXICAL   Token added - UInt64               1     <297 302>  0         
+--INFO --LEXICAL   Token added - ,                    0     <303 303>  0         
+--INFO --LEXICAL   Token added - y                    1     <305 305>  0         
+--INFO --LEXICAL   Token added - :                    0     <306 306>  0         
+--INFO --LEXICAL   Token added - Int64                1     <308 312>  0         
+--INFO --LEXICAL   Token added - )                    0     <313 313>  0         
+--INFO --LEXICAL   Token added - :                    0     <314 314>  0         
+--INFO --LEXICAL   Token added - Boolean              1     <316 322>  0         
+--INFO --LEXICAL   Token added - <INDENT>             0     <323 324>  0         
+--INFO --LEXICAL   Token added - if                   6     <329 330>  0         
+--INFO --LEXICAL   Token added - x                    1     <332 332>  0         
+--INFO --LEXICAL   Token added - +                    1     <334 334>  0         
+--INFO --LEXICAL   Token added - 1                    1     <336 336>  0         
+--INFO --LEXICAL   Token added - !=                   1     <338 339>  0         
+--INFO --LEXICAL   Token added - IncrementOperator    1     <341 357>  0         
+--INFO --LEXICAL   Token added - (                    0     <358 358>  0         
+--INFO --LEXICAL   Token added - )                    0     <359 359>  0         
+--INFO --LEXICAL   Token added - .                    0     <360 360>  0         
+--INFO --LEXICAL   Token added - apply                0     <361 365>  0         
+--INFO --LEXICAL   Token added - (                    0     <366 366>  0         
+--INFO --LEXICAL   Token added - x                    0     <367 367>  0         
+--INFO --LEXICAL   Token added - )                    0     <368 368>  0         
+--INFO --LEXICAL   Token added - <INDENT>             0     <369 370>  0         
+--INFO --LEXICAL   Token added - return               8     <377 382>  0         
+--INFO --LEXICAL   Token added - false                1     <384 388>  0         
+--INFO --LEXICAL   Token added - <DEDENT>             0     <389 390>  0         
+--INFO --LEXICAL   Token added - if                   6     <395 396>  0         
+--INFO --LEXICAL   Token added - y                    1     <398 398>  0         
+--INFO --LEXICAL   Token added - -                    1     <400 400>  0         
+--INFO --LEXICAL   Token added - 1                    1     <402 402>  0         
+--INFO --LEXICAL   Token added - !=                   1     <404 405>  0         
+--INFO --LEXICAL   Token added - DecrementOperator    1     <407 423>  0         
+--INFO --LEXICAL   Token added - (                    0     <424 424>  0         
+--INFO --LEXICAL   Token added - )                    0     <425 425>  0         
+--INFO --LEXICAL   Token added - .                    0     <426 426>  0         
+--INFO --LEXICAL   Token added - apply                0     <427 431>  0         
+--INFO --LEXICAL   Token added - (                    0     <432 432>  0         
+--INFO --LEXICAL   Token added - x                    0     <433 433>  0         
+--INFO --LEXICAL   Token added - )                    0     <434 434>  0         
+--INFO --LEXICAL   Token added - <INDENT>             0     <435 436>  0         
+--INFO --LEXICAL   Token added - return               8     <443 448>  0         
+--INFO --LEXICAL   Token added - false                1     <450 454>  0         
+--INFO --LEXICAL   Token added - <DEDENT>             0     <455 456>  0         
+--INFO --LEXICAL   Token added - return               6     <461 466>  0         
+--INFO --LEXICAL   Token added - true                 1     <468 471>  2         
+--INFO --LEXICAL   Token added - <DEDENT>             0     <472 473>  0         
+--INFO --LEXICAL   Token added - <DEDENT>             0     <472 473>  0         
 
 -------------SYNTAX----------
---INFO --SYNTAX   start parsing - class.  IDENTIFIER
---INFO --SYNTAX   Function definition -  FUNCTION_DEFINITION [LIST, DEF, IDENTIFIER, OPEN_PAREN, SEPARATED_LIST, CLOSE_PAREN, COLON, IDENTIFIER_NAME_EXPRESSION, NULL, NULL, NULL]
---INFO --SYNTAX   final result  -  TYPE_DEFINITION [CLASS, IDENTIFIER, LESS_THAN, SEPARATED_LIST, GREATER_THAN, NULL, INDENT, LIST, DEDENT]
---INFO --SYNTAX   start parsing - class.  IDENTIFIER
---INFO --SYNTAX   Function definition -  FUNCTION_DEFINITION [LIST, DEF, IDENTIFIER, OPEN_PAREN, SEPARATED_LIST, CLOSE_PAREN, COLON, IDENTIFIER_NAME_EXPRESSION, INDENT, LIST, DEDENT]
---INFO --SYNTAX   final result  -  TYPE_DEFINITION [CLASS, IDENTIFIER, NULL, NULL, NULL, TYPE_BOUND, INDENT, LIST, DEDENT]
+--INFO --SYNTAX   start parsing - interface.  IDENTIFIER
+--INFO --SYNTAX   Function definition -  FUNCTION_DEFINITION [NULL, DEF, IDENTIFIER, OPEN_PAREN, SEPARATED_LIST, CLOSE_PAREN, COLON, IDENTIFIER_NAME_EXPRESSION, NULL, NULL, NULL]
+--INFO --SYNTAX   final result  -  TYPE_DEFINITION [INTERFACE, IDENTIFIER, LESS_THAN, SEPARATED_LIST, GREATER_THAN, NULL, INDENT, LIST, DEDENT]
 --INFO --SYNTAX   start parsing - class.  IDENTIFIER
 --INFO --SYNTAX   Function definition -  FUNCTION_DEFINITION [LIST, DEF, IDENTIFIER, OPEN_PAREN, SEPARATED_LIST, CLOSE_PAREN, COLON, IDENTIFIER_NAME_EXPRESSION, INDENT, LIST, DEDENT]
 --INFO --SYNTAX   final result  -  TYPE_DEFINITION [CLASS, IDENTIFIER, NULL, NULL, NULL, TYPE_BOUND, INDENT, LIST, DEDENT]
 --INFO --SYNTAX   start parsing - class.  IDENTIFIER
---INFO --SYNTAX   Function definition -  FUNCTION_DEFINITION [NULL, DEF, IDENTIFIER, OPEN_PAREN, SEPARATED_LIST, CLOSE_PAREN, COLON, IDENTIFIER_NAME_EXPRESSION, INDENT, LIST, NULL]
---INFO --SYNTAX   final result  -  TYPE_DEFINITION [CLASS, IDENTIFIER, NULL, NULL, NULL, NULL, INDENT, LIST, NULL]
---INFO --SYNTAX   start parsing - !.  EXCLAMATION
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - =.  EQUALS
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - IncrementOperator.  IDENTIFIER
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - (.  OPEN_PAREN
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - ).  CLOSE_PAREN
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - ..  DOT
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - apply.  IDENTIFIER
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - (.  OPEN_PAREN
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - x.  IDENTIFIER
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - ).  CLOSE_PAREN
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - <INDENT>.  INDENT
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - return.  RETURN
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - false.  BOOLEAN
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - <DEDENT>.  DEDENT
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - if.  IF
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - y.  IDENTIFIER
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - -.  MINUS
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - 1.  INTEGER
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - !.  EXCLAMATION
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - =.  EQUALS
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - DecrementOperator.  IDENTIFIER
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - (.  OPEN_PAREN
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - ).  CLOSE_PAREN
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - ..  DOT
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - apply.  IDENTIFIER
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - (.  OPEN_PAREN
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - x.  IDENTIFIER
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - ).  CLOSE_PAREN
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - <INDENT>.  INDENT
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - return.  RETURN
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - false.  BOOLEAN
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - <DEDENT>.  DEDENT
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - return.  RETURN
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - true.  BOOLEAN
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - <DEDENT>.  DEDENT
---INFO --SYNTAX   final result -  NULL
---INFO --SYNTAX   start parsing - <DEDENT>.  DEDENT
---INFO --SYNTAX   final result -  NULL
+--INFO --SYNTAX   Function definition -  FUNCTION_DEFINITION [LIST, DEF, IDENTIFIER, OPEN_PAREN, SEPARATED_LIST, CLOSE_PAREN, COLON, IDENTIFIER_NAME_EXPRESSION, INDENT, LIST, DEDENT]
+--INFO --SYNTAX   final result  -  TYPE_DEFINITION [CLASS, IDENTIFIER, NULL, NULL, NULL, TYPE_BOUND, INDENT, LIST, DEDENT]
+--INFO --SYNTAX   start parsing - class.  IDENTIFIER
+--INFO --SYNTAX   Function definition -  FUNCTION_DEFINITION [NULL, DEF, IDENTIFIER, OPEN_PAREN, SEPARATED_LIST, CLOSE_PAREN, COLON, IDENTIFIER_NAME_EXPRESSION, INDENT, LIST, DEDENT]
+--INFO --SYNTAX   final result  -  TYPE_DEFINITION [CLASS, IDENTIFIER, NULL, NULL, NULL, NULL, INDENT, LIST, DEDENT]
 
 -------------AST----------
 SOURCE_TEXT 
   LIST 
     TYPE_DEFINITION 
-      CLASS class
+      INTERFACE interface
       IDENTIFIER Operator
       LESS_THAN <
       SEPARATED_LIST 
@@ -227,8 +152,7 @@ SOURCE_TEXT
       INDENT <INDENT>
       LIST 
         FUNCTION_DEFINITION 
-          LIST 
-            ABSTRACT abstract
+          NULL 
           DEF def
           IDENTIFIER apply
           OPEN_PAREN (
@@ -372,18 +296,79 @@ SOURCE_TEXT
           LIST 
             IF_STATEMENT 
               IF if
-              ADD_EXPRESSION 
-                IDENTIFIER_NAME_EXPRESSION 
-                  IDENTIFIER x
-                PLUS +
-                INTEGER_LITERAL_EXPRESSION 
-                  INTEGER 1
+              NOT_EQUALS_EXPRESSION 
+                ADD_EXPRESSION 
+                  IDENTIFIER_NAME_EXPRESSION 
+                    IDENTIFIER x
+                  PLUS +
+                  INTEGER_LITERAL_EXPRESSION 
+                    INTEGER 1
+                EXCLAMATION_EQUALS !=
+                INVOCATION_EXPRESSION 
+                  MEMBER_ACCESS_EXPRESSION 
+                    INVOCATION_EXPRESSION 
+                      IDENTIFIER_NAME_EXPRESSION 
+                        IDENTIFIER IncrementOperator
+                      OPEN_PAREN (
+                      NULL 
+                      CLOSE_PAREN )
+                    DOT .
+                    IDENTIFIER apply
+                  OPEN_PAREN (
+                  SEPARATED_LIST 
+                    IDENTIFIER_NAME_EXPRESSION 
+                      IDENTIFIER x
+                  CLOSE_PAREN )
+              INDENT <INDENT>
+              LIST 
+                RETURN_STATEMENT 
+                  RETURN return
+                  FALSE_LITERAL_EXPRESSION 
+                    BOOLEAN false
+              DEDENT <DEDENT>
               NULL 
               NULL 
               NULL 
               NULL 
+            IF_STATEMENT 
+              IF if
+              NOT_EQUALS_EXPRESSION 
+                SUBTRACT_EXPRESSION 
+                  IDENTIFIER_NAME_EXPRESSION 
+                    IDENTIFIER y
+                  MINUS -
+                  INTEGER_LITERAL_EXPRESSION 
+                    INTEGER 1
+                EXCLAMATION_EQUALS !=
+                INVOCATION_EXPRESSION 
+                  MEMBER_ACCESS_EXPRESSION 
+                    INVOCATION_EXPRESSION 
+                      IDENTIFIER_NAME_EXPRESSION 
+                        IDENTIFIER DecrementOperator
+                      OPEN_PAREN (
+                      NULL 
+                      CLOSE_PAREN )
+                    DOT .
+                    IDENTIFIER apply
+                  OPEN_PAREN (
+                  SEPARATED_LIST 
+                    IDENTIFIER_NAME_EXPRESSION 
+                      IDENTIFIER x
+                  CLOSE_PAREN )
+              INDENT <INDENT>
+              LIST 
+                RETURN_STATEMENT 
+                  RETURN return
+                  FALSE_LITERAL_EXPRESSION 
+                    BOOLEAN false
+              DEDENT <DEDENT>
               NULL 
               NULL 
               NULL 
-          NULL 
-      NULL 
+              NULL 
+            RETURN_STATEMENT 
+              RETURN return
+              TRUE_LITERAL_EXPRESSION 
+                BOOLEAN true
+          DEDENT <DEDENT>
+      DEDENT <DEDENT>

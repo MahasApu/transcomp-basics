@@ -6,7 +6,6 @@ import syspro.tm.parser.SyntaxNode;
 import syspro.tm.parser.TextSpan;
 
 import java.util.Collection;
-import java.util.List;
 
 public class SysproParseResult implements ParseResult {
 
