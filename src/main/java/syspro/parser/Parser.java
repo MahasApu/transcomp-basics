@@ -6,6 +6,7 @@ import syspro.tm.lexer.Keyword;
 import syspro.tm.lexer.Token;
 import syspro.tm.parser.AnySyntaxKind;
 import syspro.tm.parser.ParseResult;
+import syspro.tm.parser.SyntaxNode;
 import syspro.utils.Logger;
 
 import java.util.ArrayList;
@@ -19,8 +20,8 @@ import static syspro.tm.parser.SyntaxKind.*;
 
 public class Parser implements syspro.tm.parser.Parser {
 
-    public List<ASTNode> parse(ParserContext ctx) {
-        List<ASTNode> statements = new ArrayList<>();
+    public List<SyntaxNode> parse(ParserContext ctx) {
+        List<SyntaxNode> statements = new ArrayList<>();
 
         while (++ctx.pos < ctx.tokens.size()) {
             ctx.logger.info(ctx.kind(), String.format("start parsing - %s.", ctx.get().toString()));
@@ -121,7 +122,7 @@ public class Parser implements syspro.tm.parser.Parser {
     }
 
     private ASTNode parseTerminalList(ParserContext ctx, AnySyntaxKind... terms) {
-        List<ASTNode> terminalList = new ArrayList<>();
+        List<SyntaxNode> terminalList = new ArrayList<>();
 
         while (ctx.match(terms))
             terminalList.add(new ASTNode(ctx.prev().toSyntaxKind(), ctx.prev()));
@@ -177,7 +178,7 @@ public class Parser implements syspro.tm.parser.Parser {
     }
 
     private ASTNode parseVarDefDefinitionList(ParserContext ctx) {
-        List<ASTNode> list = new ArrayList<>();
+        List<SyntaxNode> list = new ArrayList<>();
         while (!ctx.typeDefinitionStarts()) {
             if (ctx.is(VAL, VAR)) list.add(parseVarDefinition(ctx));
             else if (ctx.is(ABSTRACT, VIRTUAL, OVERRIDE, NATIVE, DEF)) list.add(parseFuncDefinition(ctx));
@@ -207,7 +208,7 @@ public class Parser implements syspro.tm.parser.Parser {
 
     private ASTNode parseSeparatedList(ParserMethod<ASTNode> parser, AnySyntaxKind separator, ParserContext ctx) {
         if (ctx.is(CLOSE_PAREN)) return null;
-        List<ASTNode> list = new ArrayList<>();
+        List<SyntaxNode> list = new ArrayList<>();
         do {
             ASTNode node = parser.parse(ctx);
             if (isNull(node)) break;
@@ -623,7 +624,7 @@ public class Parser implements syspro.tm.parser.Parser {
     }
 
     private ASTNode parseStatementList(ParserContext ctx, Checker checker) {
-        List<ASTNode> list = new ArrayList<>();
+        List<SyntaxNode> list = new ArrayList<>();
 
         while (checker.check()) {
             ASTNode node = parseStatement(ctx);
@@ -660,7 +661,7 @@ public class Parser implements syspro.tm.parser.Parser {
 
         ctx.logger.updateStage(Logger.Stage.SYNTAX);
 
-        List<ASTNode> statements = parse(ctx);
+        List<SyntaxNode> statements = parse(ctx);
 
         ctx.logger.printTree(new ASTNode(SOURCE_TEXT, null, new ASTNode(LIST, null, statements)), true);
 

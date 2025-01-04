@@ -1,263 +1,228 @@
 package syspro.languageServer;
 
 import syspro.languageServer.exceptions.InterpreterException;
-import syspro.languageServer.symbols.FunctionDefinition;
-import syspro.languageServer.symbols.TypeDefinition;
-import syspro.languageServer.symbols.VariableDefinition;
+import syspro.languageServer.semantic.SemanticNode;
+import syspro.languageServer.symbols.FunctionSymbol;
+import syspro.languageServer.symbols.TypeParameterSymbol;
+import syspro.languageServer.symbols.TypeSymbol;
+import syspro.languageServer.symbols.VariableSymbol;
 import syspro.parser.Parser;
 import syspro.parser.ast.ASTNode;
-import syspro.tm.parser.AnySyntaxKind;
 import syspro.tm.parser.ParseResult;
 import syspro.tm.parser.SyntaxNode;
+import syspro.tm.symbols.MemberSymbol;
 import syspro.tm.symbols.SemanticModel;
+import syspro.tm.symbols.SyntaxNodeWithSymbols;
 
+import java.util.ArrayList;
+import java.util.List;
 
-import static syspro.tm.lexer.Symbol.*;
+import static java.util.Objects.isNull;
 import static syspro.tm.parser.SyntaxKind.*;
 
 public class LanguageServer implements syspro.tm.symbols.LanguageServer {
 
-    private void interpret(SyntaxNode tree, InterpreterContext ctx) {
+    private SyntaxNodeWithSymbols analyze(SyntaxNode tree, Environment env) {
+
         SyntaxNode list = tree.slot(0);
+        List<SyntaxNode> nodes = new ArrayList<>();
+
         for (int i = 0; i < list.slotCount(); i++) {
-            evaluate(list.slot(i), ctx);
+            nodes.add(visit(list.slot(i), env));
         }
+        return new SemanticNode(null, new ASTNode(LIST, null, nodes));
     }
 
-    private Object evaluate(SyntaxNode node, InterpreterContext ctx) {
-        switch (node.kind()) {
-            case TYPE_DEFINITION -> evalTypeDef(node, ctx);
-            case VARIABLE_DEFINITION -> evalVarDef(node, ctx);
-            case FUNCTION_DEFINITION -> evalFuncDef(node, ctx);
-            case EXPRESSION_STATEMENT -> evalExpressionStatement(node, ctx);
-            case IF_STATEMENT -> evalIfStatement(node, ctx);
-            case RETURN_STATEMENT -> evalReturnStatement(node, ctx);
-            case WHILE_STATEMENT -> evalWhileStatement(node, ctx);
-            case ASSIGNMENT_STATEMENT -> evalAssignStatement(node, ctx);
-            case SUPER_EXPRESSION -> evalSuperExpression(node, ctx);
-            case THIS_EXPRESSION -> evalThisExpression(node, ctx);
+
+    private SyntaxNodeWithSymbols visit(SyntaxNode node, Environment env) {
+        return switch (node.kind()) {
+            case TYPE_DEFINITION -> analyzeTypeDef(node, env);
+            case VARIABLE_DEFINITION -> analyzeVarDef(node, env);
+            case FUNCTION_DEFINITION -> analyzeFuncDef(node, env);
+            case EXPRESSION_STATEMENT -> analyzeExpressionStatement(node, env);
+            case IF_STATEMENT -> analyzeIfStatement(node, env);
+            case RETURN_STATEMENT -> analyzeReturnStatement(node, env);
+            case WHILE_STATEMENT -> analyzeWhileStatement(node, env);
+            case ASSIGNMENT_STATEMENT -> analyzeAssignStatement(node, env);
+            case SUPER_EXPRESSION -> analyzeSuperExpression(node, env);
+            case THIS_EXPRESSION -> analyzeThisExpression(node, env);
             default -> throw new InterpreterException(node, "Unexpected node kind: " + node.kind());
-        }
-        return null;
-    }
-
-
-    private void evalTypeDef(SyntaxNode node, InterpreterContext ctx) {
-        SyntaxNode keyword = node.slot(0);
-        // boolean isInterface = keyword.token().toString().equals("interface");
-
-        SyntaxNode name = node.slot(1);
-        String typeName = name.toString();
-
-        if (ctx.hasDefinition(typeName)) System.out.println("Type is already defined");
-        ASTNode genericsNode = (ASTNode) node.slot(3);
-        ASTNode typeBoundsNode = (ASTNode) node.slot(6);
-        ASTNode membersNode = (ASTNode) node.slot(8);
-
-        TypeDefinition typeDef = new TypeDefinition(null, keyword.kind(), null, typeName, genericsNode, typeBoundsNode, membersNode);
-        ctx.addDefinition(typeName, typeDef);
-
-        SyntaxNode members = node.slot(8);
-        if (members != null) {
-            for (int i = 0; i < members.slotCount(); i++) {
-                evaluate(members.slot(i), ctx);
-            }
-        }
-    }
-
-
-    private void evalVarDef(SyntaxNode node, InterpreterContext ctx) {
-        String name = node.slot(1).token().toString();
-        if (ctx.hasDefinition(name)) {
-            throw new InterpreterException(node, "Variable '" + name + "' is already defined.");
-        }
-
-        SyntaxNode type = node.slot(2);
-        ctx.addDefinition(name, new VariableDefinition(null, type.kind(), null));
-    }
-
-
-    private void evalFuncDef(SyntaxNode node, InterpreterContext ctx) {
-        String name = node.slot(1).token().toString();
-        if (ctx.hasDefinition(name)) {
-            throw new InterpreterException(node, "Function '" + name + "' is already defined.");
-        }
-
-        ASTNode params = (ASTNode) node.slot(2);
-        ctx.addDefinition(name, new FunctionDefinition(null, node.slot(1).kind(), null, params));
-    }
-
-
-    private void evalExpressionStatement(SyntaxNode node, InterpreterContext ctx) {
-        evaluate(node.slot(0), ctx);
-    }
-
-
-    private void evalIfStatement(SyntaxNode node, InterpreterContext ctx) {
-        Object cond = evaluate(node.slot(0), ctx);
-
-        if (!(cond instanceof Boolean)) {
-            throw new InterpreterException(node, "Condition in if statement must be a boolean.");
-        }
-        if ((boolean) cond) evaluate(node.slot(1), ctx);
-        else if (node.slotCount() > 2) evaluate(node.slot(2), ctx);
-
-    }
-
-
-    private void evalReturnStatement(SyntaxNode node, InterpreterContext ctx) {
-        evaluate(node.slot(0), ctx);
-    }
-
-
-    private void evalWhileStatement(SyntaxNode node, InterpreterContext ctx) {
-        Object cond;
-        while (true) {
-            cond = evaluate(node.slot(0), ctx);
-            if (!(cond instanceof Boolean)) {
-                throw new InterpreterException(node, "Condition in while statement must be a boolean.");
-            }
-            if (!(boolean) cond) break;
-            evaluate(node.slot(1), ctx);
-        }
-    }
-
-
-    private void evalAssignStatement(SyntaxNode node, InterpreterContext ctx) {
-        ASTNode left = (ASTNode) node.slot(0);
-        ASTNode right = (ASTNode) node.slot(1);
-
-        // hmm
-        Object rightValue = evaluate(right, ctx);
-
-        if (left.kind().isNameExpression()) {
-            String varName = left.slot(0).token().toString();
-            if (ctx.hasDefinition(varName)) {
-                ctx.addDefinition(varName, new VariableDefinition(null, node.kind(), null));
-            } else {
-                throw new InterpreterException(node, "Variable '" + varName + "' is not defined.");
-            }
-        } else {
-            throw new InterpreterException(node, "Invalid left-hand side for assignment.");
-        }
-    }
-
-
-    private Object evalLogicalExpression(SyntaxNode node, InterpreterContext ctx) {
-        Object left = evaluate(node.slot(0), ctx);
-
-        if (node.kind().equals(LOGICAL_OR_EXPRESSION)) {
-            if (ctx.getBoolean(node.slot(0))) return left;
-        } else if (ctx.getBoolean(node.slot(0))) return left;
-        return evaluate(node.slot(2), ctx);
-    }
-
-    private Object evalBinaryExpression(SyntaxNode node, InterpreterContext ctx) {
-        Object left = evaluate(node.slot(0), ctx);
-        Object right = evaluate(node.slot(2), ctx);
-        AnySyntaxKind operator = node.slot(1).token().toSyntaxKind();
-
-        switch (operator) {
-            case EXCLAMATION_EQUALS:
-                assert left != null;
-                return !left.equals(right);
-
-            case EQUALS_EQUALS:
-                assert left != null;
-                return left.equals(right);
-
-            case GREATER_THAN:
-                assert isNumeric(left, right);
-                return (double) left > (double) right;
-
-            case GREATER_THAN_EQUALS:
-                assert isNumeric(left, right);
-                return (double) left >= (double) right;
-
-            case LESS_THAN:
-                assert isNumeric(left, right);
-                return (double) left < (double) right;
-
-            case LESS_THAN_EQUALS:
-                assert isNumeric(left, right);
-                return (double) left <= (double) right;
-
-            case MINUS:
-                assert isNumeric(left, right);
-                return (double) left - (double) right;
-
-            case PLUS:
-                if (left instanceof Double && right instanceof Double) {
-                    return (double) left + (double) right;
-                }
-                if (left instanceof String && right instanceof String) {
-                    return (String) left + (String) right;
-                }
-                throw new InterpreterException(node, "Operands must be two numbers or two strings.");
-
-            case SLASH:
-                assert isNumeric(left, right);
-                return (double) left / (double) right;
-
-            case ASTERISK:
-                assert isNumeric(left, right);
-                return (double) left * (double) right;
-
-            default:
-                throw new InterpreterException(node, "Unsupported binary operator: " + operator);
-        }
-    }
-
-    private boolean isNumeric(Object left, Object right) {
-        return (left instanceof Number) && (right instanceof Number);
-    }
-
-    private boolean isNumeric(Object left) {
-        return (left instanceof Number);
-    }
-
-
-    private Object evalUnaryExpression(SyntaxNode node, InterpreterContext ctx) {
-        Object right = evaluate(node.slot(1), ctx);
-        AnySyntaxKind operator = node.slot(0).token().toSyntaxKind();
-
-        return switch (operator) {
-            case EXCLAMATION -> !ctx.getBoolean(node.slot(0));
-            case MINUS -> {
-                assert isNumeric(right);
-                yield -(double) right;
-            }
-            case PLUS -> {
-                assert isNumeric(right);
-                yield (double) right;
-            }
-            case TILDE -> {
-                assert isNumeric(right);
-                yield ~(int) right;
-            }
-            default -> throw new IllegalStateException("Unexpected value: " + operator);
         };
     }
 
-    private void evalNameExpression(SyntaxNode node, InterpreterContext ctx) {
-        String name = node.slot(0).token().toString();
-        if (node.slotCount() > 1 && node.slot(1).kind() == LESS_THAN) {
-            if (!ctx.hasDefinition(name)) {
-                throw new InterpreterException(node, "Undefined generic type '" + name + "'");
+
+//    return new ASTNode(TYPE_DEFINITION, token,
+//    keyword, name, lessThan, generics, greaterThan, typeBoundsList, indent, memberDef, dedent);
+
+    private SyntaxNodeWithSymbols analyzeTypeDef(SyntaxNode node, Environment env) {
+        SyntaxNode keyword = node.slot(0);
+        SyntaxNode name = node.slot(1);
+        String typeName = name.token().toString();
+
+        if (env.hasDefinition(typeName)) {
+            throw new InterpreterException(node, "Type '" + typeName + "' is already defined.");
+        }
+
+        SyntaxNode generics = node.slot(3);
+        List<TypeParameterSymbol> typeParameters = new ArrayList<>();
+        if (!isNull(generics)) {
+            SyntaxNode list = generics.slot(0);
+            for (int i = 0; i < list.slotCount(); i++) {
+                SyntaxNode paramNode = list.slot(i);
+                String paramName = paramNode.token().toString();
+                TypeParameterSymbol paramSymbol = new TypeParameterSymbol(paramName, null);
+                typeParameters.add(paramSymbol);
             }
         }
+
+        SyntaxNode typeBounds = node.slot(5);
+        List<TypeSymbol> baseTypes = new ArrayList<>();
+        if (!isNull(typeBounds)) {
+            for (int i = 0; i < typeBounds.slotCount(); i++) {
+                SyntaxNode boundNode = typeBounds.slot(i);
+                baseTypes.add(new TypeSymbol(boundNode.token().toString(),
+                        null, null, null, boundNode));
+            }
+        }
+
+
+        TypeSymbol typeSymbol = new TypeSymbol(typeName,
+                null,
+                typeParameters,
+                baseTypes,
+                node);
+        TypeSymbol finalTypeSymbol = typeSymbol;
+        typeParameters.replaceAll(typeParameterSymbol -> new TypeParameterSymbol(typeParameterSymbol.name(), finalTypeSymbol));
+        env.pushToScope(typeSymbol);
+
+
+
+        SyntaxNode members = node.slot(7);
+        List<SyntaxNodeWithSymbols> nodes = new ArrayList<>();
+
+        if (!isNull(members)) {
+            for (int i = 0; i < members.slotCount(); i++) {
+                nodes.add(visit(members.slot(i), env));
+            }
+        }
+
+
+        List<MemberSymbol> m = nodes.stream().map(SyntaxNodeWithSymbols::symbol).map(symbol -> (MemberSymbol) symbol).toList();
+        typeSymbol = new TypeSymbol(typeName,
+                m,
+                typeParameters,
+                baseTypes,
+                node);
+
+        env.addDefinition(typeName, new SemanticNode(typeSymbol, node));
+
+        env.popFromScope();
+
+        return new SemanticNode(typeSymbol, node);
     }
 
-    private void evalSuperExpression(SyntaxNode node, InterpreterContext ctx) {
-        if (!ctx.isInsideClass()) {
-            throw new InterpreterException(node, "'super' used outside of a class.");
+
+//    new ASTNode(VARIABLE_DEFINITION, null, keyword, name, colon, typeExpr, eq, valueExpr);
+
+    private SyntaxNodeWithSymbols analyzeVarDef(SyntaxNode node, Environment env) {
+        String name = node.slot(1).token().toString();
+        if (env.hasDefinition(name)) {
+            throw new InterpreterException(node, "Variable '" + name + "' is already defined.");
         }
+
+        SyntaxNode type = node.slot(3);
+
+        TypeSymbol varTypeSymbol = null;
+        if (type != null) {
+            varTypeSymbol = new syspro.languageServer.symbols.TypeSymbol(type.token().toString(),
+                    null, null, null, type);
+        }
+
+        VariableSymbol symbol = new VariableSymbol(name, varTypeSymbol, env.getTopScope(), null, node);
+
+        env.addDefinition(name, new SemanticNode(symbol, node));
+        return new SemanticNode(symbol, node);
     }
 
-    private void evalThisExpression(SyntaxNode node, InterpreterContext ctx) {
-        if (!ctx.isInsideClass()) {
-            throw new InterpreterException(node, "'this' used outside of a class.");
+//    ASTNode node = new ASTNode(FUNCTION_DEFINITION, null,
+//    terminalList, def, functionName, openParen, parameterList, closeParen,
+//            colon, returnType, indent, functionBody, dedent);
+
+    private SyntaxNodeWithSymbols analyzeFuncDef(SyntaxNode node, Environment env) {
+        String name = node.slot(2).token().toString();
+        if (env.hasDefinition(name)) {
+            throw new InterpreterException(node, "Function '" + name + "' is already defined.");
         }
+
+        SyntaxNode paramsNode = node.slot(4);
+        FunctionSymbol symbol = new FunctionSymbol(name, null, null, null,
+                false, false, false, false, env.getTopScope(), node);
+        env.addDefinition(name, new SemanticNode(symbol, node));
+        if (!isNull(paramsNode)) {
+            for (int i = 0; i < paramsNode.slotCount(); i++) {
+                visit(paramsNode.slot(i), env);
+            }
+        }
+
+        return new SemanticNode(symbol, node);
+    }
+
+
+    private SyntaxNodeWithSymbols analyzeExpressionStatement(SyntaxNode node, Environment env) {
+        SyntaxNode expression = node.slot(0);
+        visit(expression, env);
+        return new SemanticNode(null, node);
+    }
+
+    private SyntaxNodeWithSymbols analyzeIfStatement(SyntaxNode node, Environment env) {
+        SyntaxNode condition = node.slot(0);
+        visit(condition, env);
+
+        SyntaxNode thenBlock = node.slot(1);
+        visit(thenBlock, env);
+
+        SyntaxNode elseBlock = node.slot(2);
+        if (!isNull(elseBlock)) {
+            visit(elseBlock, env);
+        }
+
+        return new SemanticNode(null, node);
+    }
+
+    private SyntaxNodeWithSymbols analyzeReturnStatement(SyntaxNode node, Environment env) {
+        SyntaxNode value = node.slot(0);
+        if (!isNull(value)) {
+            visit(value, env);
+        }
+        return new SemanticNode(null, node);
+    }
+
+    private SyntaxNodeWithSymbols analyzeWhileStatement(SyntaxNode node, Environment env) {
+        SyntaxNode condition = node.slot(0);
+        visit(condition, env);
+
+        SyntaxNode body = node.slot(1);
+        visit(body, env);
+
+        return new SemanticNode(null, node);
+    }
+
+    private SyntaxNodeWithSymbols analyzeAssignStatement(SyntaxNode node, Environment env) {
+        SyntaxNode left = node.slot(0);
+        visit(left, env);
+
+        SyntaxNode right = node.slot(1);
+        visit(right, env);
+
+        return new SemanticNode(null, node);
+    }
+
+    private SyntaxNodeWithSymbols analyzeSuperExpression(SyntaxNode node, Environment env) {
+        return new SemanticNode(null, node);
+    }
+
+    private SyntaxNodeWithSymbols analyzeThisExpression(SyntaxNode node, Environment env) {
+        return new SemanticNode(null, node);
     }
 
 
@@ -267,11 +232,10 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         Parser parser = new Parser();
         ParseResult result = parser.parse(code);
         SyntaxNode tree = result.root();
-        InterpreterContext ctx = new InterpreterContext(tree);
+        Environment env = new Environment(tree);
 
-        interpret(tree, ctx);
+        SyntaxNode semanticTree = analyze(tree, env);
 
-//        return new syspro.languageServer.semantic.SemanticModel(null, null, null);
-        return null;
+        return new syspro.languageServer.semantic.SemanticModel(new SemanticNode(null, new ASTNode(SOURCE_TEXT, null, semanticTree)), List.of(), List.of());
     }
 }

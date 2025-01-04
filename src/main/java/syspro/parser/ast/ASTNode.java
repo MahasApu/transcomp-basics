@@ -11,21 +11,21 @@ import java.util.List;
 public class ASTNode implements SyntaxNode {
 
     private final AnySyntaxKind kind;
-    private final List<ASTNode> slots;
+    private final List<SyntaxNode> slots;
     private final Token token;
 
 
-    public ASTNode(AnySyntaxKind kind, Token token, ASTNode... slots) {
+    public ASTNode(AnySyntaxKind kind, Token token, SyntaxNode... slots) {
         this.kind = kind;
         this.slots = reduceNulls(slots);
         this.token = token;
     }
 
-    private List<ASTNode> reduceNulls(ASTNode[] slots) {
+    private List<SyntaxNode> reduceNulls(SyntaxNode[] slots) {
         return new ArrayList<>(Arrays.asList(slots));
     }
 
-    public ASTNode(AnySyntaxKind kind, Token token, List<ASTNode> slots) {
+    public ASTNode(AnySyntaxKind kind, Token token, List<SyntaxNode> slots) {
         this.kind = kind;
         this.slots = slots;
         this.token = token;
