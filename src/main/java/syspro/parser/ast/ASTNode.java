@@ -31,6 +31,10 @@ public class ASTNode implements SyntaxNode {
         this.token = token;
     }
 
+    public void updateSlot(int index, SyntaxNode node) {
+        slots.set(index, node);
+    }
+
     @Override
     public AnySyntaxKind kind() {
         return kind;

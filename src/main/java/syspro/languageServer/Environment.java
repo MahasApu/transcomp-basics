@@ -4,10 +4,15 @@ import syspro.languageServer.exceptions.LanguageServerException;
 import syspro.languageServer.semantic.SemanticNode;
 import syspro.languageServer.symbols.*;
 import syspro.parser.ast.ASTNode;
+import syspro.tm.lexer.Keyword;
 import syspro.tm.parser.SyntaxNode;
 import syspro.tm.symbols.SemanticSymbol;
+import syspro.tm.symbols.SymbolKind;
 
 import java.util.*;
+
+import static syspro.tm.parser.SyntaxKind.IDENTIFIER;
+import static syspro.tm.parser.SyntaxKind.TYPE_DEFINITION;
 
 public class Environment {
 
@@ -20,6 +25,22 @@ public class Environment {
         definitions = new HashMap<>();
         unresolvedTypes = new ArrayList<>();
         push(new Scope(null, "GlobalScope"));
+        initBuildInTypes();
+    }
+
+
+    private void initBuildInTypes() {
+
+        List<String> names = List.of("Int32", "Int64", "UInt32", "UInt64", "Boolean", "Rune");
+        for (String name : names) {
+
+            ASTNode keyword = new ASTNode(Keyword.CLASS, null);
+            ASTNode identifier = new ASTNode(IDENTIFIER, null);
+            ASTNode node = new ASTNode(TYPE_DEFINITION, null, keyword, identifier, null, null, null, null, null, null, null);
+
+            TypeSymbol symbol = new TypeSymbol(name, null, null, null, node);
+            get().declareSymbol(name, symbol);
+        }
     }
 
 //    public void addUnresolvedType(String name, TypeSymbol typeSymbol) {
@@ -54,7 +75,7 @@ public class Environment {
 
     public SemanticSymbol getOwner() {
         Scope ownerScope = get().getParent();
-        return !Objects.isNull(ownerScope) ? ownerScope.lookupSymbol(ownerScope.getName()) : null;
+        return !Objects.isNull(ownerScope) ? get().lookupSymbol(ownerScope.getName()) : null;
     }
 
     public void define(String name, SemanticNode node) {
@@ -67,6 +88,10 @@ public class Environment {
 
     public boolean isDefinedLocally(String name) {
         return get().isDeclaredLocally(name);
+    }
+
+    public boolean isInsideFunction() {
+        return lookup(get().getName()).kind().equals(SymbolKind.FUNCTION);
     }
 
     public void declare(String name, SemanticSymbol semanticSymbol) {
