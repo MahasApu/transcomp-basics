@@ -87,10 +87,10 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         SyntaxNode primary = node.slot(0);
         SyntaxNode expression = node.slot(2);
 
-        SemanticNode leftSymbol = (SemanticNode) visit(primary, env);
-        SemanticNode rightSymbol = (SemanticNode) visit(expression, env);
+        SemanticNode primarySymbol = (SemanticNode) visit(primary, env);
+        SemanticNode exprSymbol = (SemanticNode) visit(expression, env);
 
-        if (!leftSymbol.symbol().name().equals(rightSymbol.symbol().name())) {
+        if (!primarySymbol.symbol().name().equals(exprSymbol.symbol().name())) {
             throw new LanguageServerException(node, "Type mismatch in assignment statement.");
         }
 
