@@ -50,22 +50,21 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         };
     }
 
-    private SyntaxNodeWithSymbols analyzeForStatement(SyntaxNode node, Environment env) {
-        SyntaxNode initializer = node.slot(0);
-        SyntaxNode condition = node.slot(1);
-        SyntaxNode increment = node.slot(2);
-        SyntaxNode body = node.slot(3);
 
-        visit(initializer, env);
-        visit(condition, env);
-        visit(increment, env);
+    // new ASTNode(FOR_STATEMENT, null, forNode, primary, in, expr, indent, statements, dedent)
+    private SyntaxNodeWithSymbols analyzeForStatement(SyntaxNode node, Environment env) {
+        SyntaxNode primary = node.slot(1);
+        SyntaxNode iterable = node.slot(3);
+        SyntaxNode body = node.slot(5);
+
+        visit(primary, env);
+        visit(iterable, env);
         visit(body, env);
 
         return new SemanticNode(null, node);
     }
 
     private SyntaxNodeWithSymbols analyzeThisExpression(SyntaxNode node, Environment env) {
-        // 'this' expression refers to the current class instance
         SemanticSymbol owner = env.getOwner();
         if (!(owner instanceof TypeSymbol)) {
             throw new LanguageServerException(node, "'this' can only be used within a class or object.");
@@ -73,8 +72,8 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         return new SemanticNode(owner, node);
     }
 
+
     private SyntaxNodeWithSymbols analyzeSuperExpression(SyntaxNode node, Environment env) {
-        // 'super' expression refers to the base class
         SemanticSymbol owner = env.getOwner();
         if (!(owner instanceof TypeSymbol typeSymbol) || typeSymbol.baseTypes().isEmpty()) {
             throw new LanguageServerException(node, "'super' can only be used within a class with a base type.");
@@ -82,12 +81,14 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         return new SemanticNode(typeSymbol.baseTypes().getFirst(), node);
     }
 
-    private SyntaxNodeWithSymbols analyzeAssignStatement(SyntaxNode node, Environment env) {
-        SyntaxNode left = node.slot(0);
-        SyntaxNode right = node.slot(2);
 
-        SemanticNode leftSymbol = (SemanticNode) visit(left, env);
-        SemanticNode rightSymbol = (SemanticNode) visit(right, env);
+    // new ASTNode(ASSIGNMENT_STATEMENT, null, primary, eq, expr)
+    private SyntaxNodeWithSymbols analyzeAssignStatement(SyntaxNode node, Environment env) {
+        SyntaxNode primary = node.slot(0);
+        SyntaxNode expression = node.slot(2);
+
+        SemanticNode leftSymbol = (SemanticNode) visit(primary, env);
+        SemanticNode rightSymbol = (SemanticNode) visit(expression, env);
 
         if (!leftSymbol.symbol().name().equals(rightSymbol.symbol().name())) {
             throw new LanguageServerException(node, "Type mismatch in assignment statement.");
@@ -96,6 +97,8 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         return new SemanticNode(null, node);
     }
 
+
+    //   new ASTNode(WHILE_STATEMENT, null, whileNode, cond, indent, statements, dedent);
     private SyntaxNodeWithSymbols analyzeWhileStatement(SyntaxNode node, Environment env) {
         SyntaxNode condition = node.slot(0);
         SyntaxNode body = node.slot(1);
@@ -106,18 +109,13 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         return new SemanticNode(null, node);
     }
 
-    private SyntaxNodeWithSymbols analyzeReturnStatement(SyntaxNode node, Environment env) {
-        SyntaxNode value = node.slot(0);
-        if (!isNull(value)) {
-            visit(value, env);
-        }
-        return new SemanticNode(null, node);
-    }
 
+    // ASTNode(IF_STATEMENT, null, ifNode, cond, indentTrue, statementsTrue, dedentTrue,
+    //                             elseNode, indentFalse, statementsFalse, dedentFalse);
     private SyntaxNodeWithSymbols analyzeIfStatement(SyntaxNode node, Environment env) {
-        SyntaxNode condition = node.slot(0);
-        SyntaxNode thenBlock = node.slot(1);
-        SyntaxNode elseBlock = node.slot(2);
+        SyntaxNode condition = node.slot(1);
+        SyntaxNode thenBlock = node.slot(3);
+        SyntaxNode elseBlock = node.slot(7);
 
         visit(condition, env);
         visit(thenBlock, env);
@@ -134,6 +132,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
     }
 
 
+    // ASTNode(PARAMETER_DEFINITION, null, identifier, colon, name)
     // Only for type definition (in case of generics)
     private SyntaxNodeWithSymbols analyzeTypeParameterDefinition(SyntaxNode node, Environment env) {
         String typeName = node.slot(0).token().toString();
@@ -165,7 +164,6 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
 
 
     // new ASTNode(PARAMETER_DEFINITION, null, identifier, colon, name);
-
     // Only in function definition
     private SyntaxNodeWithSymbols analyzeParameterDefinition(SyntaxNode node, Environment env) {
         String paramName = node.slot(0).token().toString();
@@ -185,9 +183,8 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         return new SemanticNode(paramSymbol, node);
     }
 
-//    return new ASTNode(TYPE_DEFINITION, token,
+    //    return new ASTNode(TYPE_DEFINITION, token,
 //    keyword, name, lessThan, generics, greaterThan, typeBoundsList, indent, memberDef, dedent);
-
     private SyntaxNodeWithSymbols analyzeTypeDefinition(SyntaxNode node, Environment env) {
         SyntaxNode keyword = node.slot(0);
         SyntaxNode name = node.slot(1);
@@ -212,9 +209,12 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         List<SyntaxNode> nodes = analyzeTypeMembers(members, env, typeSymbol);
         if (!nodes.isEmpty()) ((ASTNode) node).updateSlot(7, new ASTNode(members.kind(), members.token(), nodes));
 
-        typeSymbol = new TypeSymbol(typeName,
+        typeSymbol = new TypeSymbol(
+                typeName,
                 nodes.stream().map(s -> (SyntaxNodeWithSymbols) s).map(SyntaxNodeWithSymbols::symbol).map(s -> (MemberSymbol) s).toList(),
-                typeParameters, baseTypes, node);
+                typeParameters,
+                baseTypes,
+                node);
 
         env.define(typeName, new SemanticNode(typeSymbol, node));
 
@@ -263,8 +263,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         return baseTypes;
     }
 
-//    new ASTNode(VARIABLE_DEFINITION, null, keyword, name, colon, typeExpr, eq, valueExpr);
-
+    //    new ASTNode(VARIABLE_DEFINITION, null, keyword, name, colon, typeExpr, eq, valueExpr);
     private SyntaxNodeWithSymbols analyzeVariableDefinition(SyntaxNode node, Environment env) {
         String name = node.slot(1).token().toString();
         if (env.isDefined(name))
@@ -291,7 +290,6 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
     //    ASTNode node = new ASTNode(FUNCTION_DEFINITION, null,
     //    terminalList, def, functionName, openParen, parameterList, closeParen,
     //            colon, returnType, indent, functionBody, dedent);
-
     private SyntaxNodeWithSymbols analyzeFunctionDefinition(SyntaxNode node, Environment env) {
         String name = node.slot(2).token().toString();
         boolean isConstructor = name.equals("this");
@@ -314,7 +312,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         if (!nodes.isEmpty()) ((ASTNode) node).updateSlot(4, new ASTNode(paramsNode.kind(), paramsNode.token(), nodes));
 
 
-        SyntaxNode bodyNode = node.slot(9); // Slot 10 is the body
+        SyntaxNode bodyNode = node.slot(9);
         List<SyntaxNode> bodyNodes = new ArrayList<>();
 //        if (!isNull(bodyNode)) {
 //            for (int i = 0; i < bodyNode.slotCount(); i++) {
@@ -332,11 +330,6 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
                 modifiers.get(0), modifiers.get(1), modifiers.get(2), modifiers.get(3),
                 owner,
                 node);
-
-        for (SyntaxNode n : nodes) {
-            n = (SyntaxNodeWithSymbols) n;
-        }
-
 
         env.pop();
 
@@ -394,10 +387,8 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         List<SyntaxNode> semanticNodes = analyze(tree, env);
 
 
-        syspro.languageServer.semantic.SemanticModel model = new syspro.languageServer.semantic.SemanticModel(
+        return new syspro.languageServer.semantic.SemanticModel(
                 new ASTNode(SOURCE_TEXT, null, new ASTNode(LIST, null, semanticNodes)),
                 List.of(), List.of());
-
-        return model;
     }
 }
