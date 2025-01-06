@@ -22,7 +22,7 @@ public class TypeParameterSymbol implements syspro.tm.symbols.TypeParameterSymbo
 
     @Override
     public SymbolKind kind() {
-        return null;
+        return SymbolKind.TYPE_PARAMETER;
     }
 
     @Override

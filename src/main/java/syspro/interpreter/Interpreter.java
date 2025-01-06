@@ -1,7 +1,7 @@
 //package syspro.interpreter;
 //
 //import syspro.languageServer.Environment;
-//import syspro.languageServer.exceptions.InterpreterException;
+//import syspro.languageServer.exceptions.LanguageServerException;
 //import syspro.parser.Parser;
 //import syspro.parser.ast.ASTNode;
 //import syspro.tm.parser.AnySyntaxKind;
@@ -27,7 +27,7 @@
 //            case TYPE_DEFINITION -> analyzeTypeDef(node, ctx);
 //            case VARIABLE_DEFINITION -> analyzeVarDef(node, ctx);
 //            case FUNCTION_DEFINITION -> analyzeFuncDef(node, ctx);
-//            default -> throw new InterpreterException(node, "Unexpected node kind: " + node.kind());
+//            default -> throw new LanguageServerException(node, "Unexpected node kind: " + node.kind());
 //        }
 //        return null;
 //    }
@@ -40,13 +40,13 @@
 //        SyntaxNode name = node.slot(1);
 //        String typeName = name.toString();
 //
-//        if (ctx.hasDefinition(typeName)) System.out.println("Type is already defined");
+//        if (ctx.isDefined(typeName)) System.out.println("Type is already defined");
 //        ASTNode genericsNode = (ASTNode) node.slot(3);
 //        ASTNode typeBoundsNode = (ASTNode) node.slot(6);
 //        ASTNode membersNode = (ASTNode) node.slot(8);
 //
 //        TypeDefinition typeDef = new TypeDefinition(null, keyword.kind(), null, typeName, genericsNode, typeBoundsNode, membersNode);
-//        ctx.addDefinition(typeName, typeDef);
+//        ctx.define(typeName, typeDef);
 //
 //        SyntaxNode members = node.slot(8);
 //        if (members != null) {
@@ -59,23 +59,23 @@
 //
 //    private void analyzeVarDef(SyntaxNode node, Environment ctx) {
 //        String name = node.slot(1).token().toString();
-//        if (ctx.hasDefinition(name)) {
-//            throw new InterpreterException(node, "Variable '" + name + "' is already defined.");
+//        if (ctx.isDefined(name)) {
+//            throw new LanguageServerException(node, "Variable '" + name + "' is already defined.");
 //        }
 //
 //        SyntaxNode type = node.slot(2);
-//        ctx.addDefinition(name, new VariableDefinition(null, type.kind(), null));
+//        ctx.define(name, new VariableDefinition(null, type.kind(), null));
 //    }
 //
 //
 //    private void analyzeFuncDef(SyntaxNode node, Environment ctx) {
 //        String name = node.slot(1).token().toString();
-//        if (ctx.hasDefinition(name)) {
-//            throw new InterpreterException(node, "Function '" + name + "' is already defined.");
+//        if (ctx.isDefined(name)) {
+//            throw new LanguageServerException(node, "Function '" + name + "' is already defined.");
 //        }
 //
 //        ASTNode params = (ASTNode) node.slot(2);
-//        ctx.addDefinition(name, new FunctionDefinition(null, node.slot(1).kind(), null, params));
+//        ctx.define(name, new FunctionDefinition(null, node.slot(1).kind(), null, params));
 //    }
 //
 //
@@ -88,7 +88,7 @@
 //        Object cond = visit(node.slot(0), ctx);
 //
 //        if (!(cond instanceof Boolean)) {
-//            throw new InterpreterException(node, "Condition in if statement must be a boolean.");
+//            throw new LanguageServerException(node, "Condition in if statement must be a boolean.");
 //        }
 //        if ((boolean) cond) visit(node.slot(1), ctx);
 //        else if (node.slotCount() > 2) visit(node.slot(2), ctx);
@@ -106,7 +106,7 @@
 //        while (true) {
 //            cond = visit(node.slot(0), ctx);
 //            if (!(cond instanceof Boolean)) {
-//                throw new InterpreterException(node, "Condition in while statement must be a boolean.");
+//                throw new LanguageServerException(node, "Condition in while statement must be a boolean.");
 //            }
 //            if (!(boolean) cond) break;
 //            visit(node.slot(1), ctx);
@@ -123,13 +123,13 @@
 //
 //        if (left.kind().isNameExpression()) {
 //            String varName = left.slot(0).token().toString();
-//            if (ctx.hasDefinition(varName)) {
-//                ctx.addDefinition(varName, new VariableDefinition(null, node.kind(), null));
+//            if (ctx.isDefined(varName)) {
+//                ctx.define(varName, new VariableDefinition(null, node.kind(), null));
 //            } else {
-//                throw new InterpreterException(node, "Variable '" + varName + "' is not defined.");
+//                throw new LanguageServerException(node, "Variable '" + varName + "' is not defined.");
 //            }
 //        } else {
-//            throw new InterpreterException(node, "Invalid left-hand side for assignment.");
+//            throw new LanguageServerException(node, "Invalid left-hand side for assignment.");
 //        }
 //    }
 //
@@ -184,7 +184,7 @@
 //                if (left instanceof String && right instanceof String) {
 //                    return (String) left + (String) right;
 //                }
-//                throw new InterpreterException(node, "Operands must be two numbers or two strings.");
+//                throw new LanguageServerException(node, "Operands must be two numbers or two strings.");
 //
 //            case SLASH:
 //                assert isNumeric(left, right);
@@ -195,7 +195,7 @@
 //                return (double) left * (double) right;
 //
 //            default:
-//                throw new InterpreterException(node, "Unsupported binary operator: " + operator);
+//                throw new LanguageServerException(node, "Unsupported binary operator: " + operator);
 //        }
 //    }
 //
@@ -233,21 +233,21 @@
 //    private void analyzeNameExpression(SyntaxNode node, Environment ctx) {
 //        String name = node.slot(0).token().toString();
 //        if (node.slotCount() > 1 && node.slot(1).kind() == LESS_THAN) {
-//            if (!ctx.hasDefinition(name)) {
-//                throw new InterpreterException(node, "Undefined generic type '" + name + "'");
+//            if (!ctx.isDefined(name)) {
+//                throw new LanguageServerException(node, "Undefined generic type '" + name + "'");
 //            }
 //        }
 //    }
 //
 //    private void analyzeSuperExpression(SyntaxNode node, Environment ctx) {
 //        if (!ctx.isInsideClass()) {
-//            throw new InterpreterException(node, "'super' used outside of a class.");
+//            throw new LanguageServerException(node, "'super' used outside of a class.");
 //        }
 //    }
 //
 //    private void analyzeThisExpression(SyntaxNode node, Environment ctx) {
 //        if (!ctx.isInsideClass()) {
-//            throw new InterpreterException(node, "'this' used outside of a class.");
+//            throw new LanguageServerException(node, "'this' used outside of a class.");
 //        }
 //    }
 //

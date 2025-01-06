@@ -1,119 +1,82 @@
 package syspro.languageServer;
 
-import syspro.languageServer.exceptions.InterpreterException;
+import syspro.languageServer.exceptions.LanguageServerException;
 import syspro.languageServer.semantic.SemanticNode;
-import syspro.languageServer.symbols.TypeSymbol;
+import syspro.languageServer.symbols.*;
 import syspro.parser.ast.ASTNode;
-import syspro.tm.lexer.BooleanLiteralToken;
-import syspro.tm.lexer.Keyword;
 import syspro.tm.parser.SyntaxNode;
 import syspro.tm.symbols.SemanticSymbol;
-import syspro.tm.symbols.SyntaxNodeWithSymbols;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Stack;
-
-import static java.util.Objects.isNull;
-import static syspro.tm.parser.SyntaxKind.IDENTIFIER;
-import static syspro.tm.parser.SyntaxKind.TYPE_DEFINITION;
+import java.util.*;
 
 public class Environment {
 
-
-    private final SyntaxNode tree;
-    private final Environment enclosing;
-    private final Map<String, SyntaxNodeWithSymbols> values = new HashMap<>();
-    private final Stack<SemanticSymbol> scope = new Stack<>();
-
+    private final Deque<Scope> scopes;
+    private final Map<String, SemanticNode> definitions;
+    private final List<TypeSymbol> unresolvedTypes;
 
     public Environment(SyntaxNode tree) {
-        this.tree = tree;
-        this.enclosing = null;
-        initBuildInTypes();
+        scopes = new ArrayDeque<>();
+        definitions = new HashMap<>();
+        unresolvedTypes = new ArrayList<>();
+        push(new Scope(null, "GlobalScope"));
     }
 
+//    public void addUnresolvedType(String name, TypeSymbol typeSymbol) {
+//        unresolvedTypes.add(typeSymbol);
+//    }
+//
+//    public void resolveUnresolvedTypes() {
+//        for (TypeSymbol unresolvedType : unresolvedTypes) {
+//            if (isDefined(unresolvedType.name())) {
+//                TypeSymbol resolvedType = (TypeSymbol) definitions.get(unresolvedType.name()).symbol();
+//            }
+//        }
+//        unresolvedTypes.clear();
+//    }
 
-    public boolean hasDefinition(String def) {
-        if (values.containsKey(def)) return true;
-        if (!isNull(enclosing)) return enclosing.hasDefinition(def);
-        return false;
+    public SemanticSymbol lookup(String name) {
+        return get().lookupSymbol(name);
     }
 
-    private void initBuildInTypes() {
+    public void push(Scope scope) {
+        if (Objects.isNull(scope)) throw new IllegalArgumentException("Scope cannot be null");
+        scopes.push(scope);
+    }
 
-        List<String> names = List.of("Int32", "Int64", "UInt32", "UInt64", "Boolean", "Rune");
-        for (String name : names) {
+    public void pop() {
+        scopes.pop();
+    }
 
-            ASTNode keyword = new ASTNode(Keyword.CLASS, null);
-            ASTNode identifier = new ASTNode(IDENTIFIER, null);
-            ASTNode node = new ASTNode(TYPE_DEFINITION, null, keyword, identifier, null, null, null, null, null, null, null);
+    public Scope get() {
+        return scopes.getFirst();
+    }
 
-            TypeSymbol symbol = new TypeSymbol(name, null, null, null, node);
-            values.put(name, new SemanticNode(symbol, node));
+    public SemanticSymbol getOwner() {
+        Scope ownerScope = get().getParent();
+        return !Objects.isNull(ownerScope) ? ownerScope.lookupSymbol(ownerScope.getName()) : null;
+    }
+
+    public void define(String name, SemanticNode node) {
+        definitions.put(name, node);
+    }
+
+    public boolean isDefined(String name) {
+        return definitions.containsKey(name) || !Objects.isNull(lookup(name));
+    }
+
+    public boolean isDefinedLocally(String name) {
+        return get().isDeclaredLocally(name);
+    }
+
+    public void declare(String name, SemanticSymbol semanticSymbol) {
+        switch (semanticSymbol) {
+            case TypeSymbol symbol -> get().declareSymbol(name, symbol);
+            case VariableSymbol symbol -> get().declareSymbol(name, symbol);
+            case FunctionSymbol symbol -> get().declareSymbol(name, symbol);
+            case TypeParameterSymbol symbol -> get().declareSymbol(name, symbol);
+            default ->
+                    throw new LanguageServerException(new SemanticNode(semanticSymbol, new ASTNode(null, null)), "Unsupported symbol type for declaration: " + semanticSymbol);
         }
-    }
-
-    public void addDefinition(String def, SyntaxNodeWithSymbols node) {
-        values.put(def, node);
-    }
-
-    public void pushToScope(SemanticSymbol symbol) { scope.add(symbol); }
-
-    public SemanticSymbol getTopScope() { return scope.getLast(); }
-
-    public void popFromScope() { scope.pop(); }
-
-    public boolean getBoolean(SyntaxNode node) {
-        if (isNull(node)) return false;
-
-        return switch (node.token()) {
-            case BooleanLiteralToken ignored -> node.toString().equals("true");
-            default -> false;
-        };
-    }
-
-
-    Object get(SyntaxNode node) {
-        String name = node.toString();
-        if (values.containsKey(name)) return values.get(name);
-        if (!isNull(enclosing)) return enclosing.get(node);
-        return null;
-    }
-
-    void assign(String name, SyntaxNodeWithSymbols node) {
-        if (values.containsKey(name)) {
-            values.put(name, node);
-            return;
-        }
-        if (!isNull(enclosing)) {
-            enclosing.assign(name, node);
-            return;
-        }
-        throw new InterpreterException(node, "Undefined variable '" + node + "'.");
-
-    }
-
-    Environment getBaseEnvironment(int height) {
-        Environment env = this;
-        for (int i = 0; i < height; i++) env = env.enclosing;
-        return env;
-    }
-
-    SyntaxNodeWithSymbols getAt(int height, String name) {
-        return getBaseEnvironment(height).values.get(name);
-    }
-
-    SyntaxNodeWithSymbols assignAt(int height, String name, SyntaxNodeWithSymbols node) {
-        return getBaseEnvironment(height).values.put(name, node);
-    }
-
-
-    @Override
-    public String toString() {
-        String result = values.toString();
-        if (enclosing != null) result += " -> " + enclosing;
-        return result;
     }
 }
