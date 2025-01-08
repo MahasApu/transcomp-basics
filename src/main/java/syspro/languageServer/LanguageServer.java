@@ -14,6 +14,7 @@ import syspro.tm.symbols.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import static java.util.Objects.isNull;
 import static syspro.tm.parser.SyntaxKind.*;
@@ -51,7 +52,9 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         String name = node.slot(0).token().toString();
         ASTNode identifier = (ASTNode) node.slot(0);
 
-        VariableSymbol symbol = new VariableSymbol(name, null, env.get().lookupSymbol(env.get().getName()), SymbolKind.LOCAL, identifier);
+
+
+        VariableSymbol symbol = new VariableSymbol(name, null, env.get().getSymbol(), SymbolKind.LOCAL, identifier);
         node.updateSymbol(symbol);
     }
 
@@ -171,7 +174,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
             if (isNull(paramType)) paramType = new TypeParameterSymbol(typeName, env.getOwner());
         }
 
-        VariableSymbol paramSymbol = new VariableSymbol(paramName, paramType, env.get().lookupSymbol(env.get().getName()), SymbolKind.PARAMETER, node);
+        VariableSymbol paramSymbol = new VariableSymbol(paramName, paramType, env.get().getSymbol(), SymbolKind.PARAMETER, node);
         env.declare(paramName, paramSymbol);
         node.updateSymbol(paramSymbol);
 
@@ -190,7 +193,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         TypeSymbol typeSymbol = new TypeSymbol(typeName, node);
         env.declare(typeName, typeSymbol);
 
-        env.push(new Scope(env.get(), typeName));
+        env.push(new Scope(env.get(), typeName, typeSymbol));
 
         typeSymbol.typeArguments = analyzeTypeParameters((ASTNode) node.slot(3), env);
         typeSymbol.baseTypes = analyzeBaseTypes((ASTNode) node.slot(5), env);
@@ -199,7 +202,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         ASTNode members = (ASTNode) node.slot(7);
         analyze(members, env);
 
-        typeSymbol.members = env.get().getAllMembers();;
+        typeSymbol.members = env.get().getAllMembers();
 
         env.pop();
         node.updateSymbol(typeSymbol);
@@ -214,10 +217,9 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
                 SyntaxNode paramNode = generics.slot(i);
                 String paramName = paramNode.slot(0).token().toString();
 
-
-
                 TypeLikeSymbol paramSymbol = (TypeLikeSymbol) env.lookup(paramName);
-                if (isNull(paramSymbol)) paramSymbol = new TypeParameterSymbol(paramName, env.get().lookupSymbol(env.get().getName()));
+                if (isNull(paramSymbol))
+                    paramSymbol = new TypeParameterSymbol(paramName, env.get().getSymbol());
                 typeParameters.add(paramSymbol);
             }
         }
@@ -259,7 +261,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
 
         SymbolKind kind = env.isInsideFunction() ? SymbolKind.LOCAL : SymbolKind.FIELD;
 
-        VariableSymbol symbol = new VariableSymbol(name, varTypeSymbol, env.get().lookupSymbol(env.get().getName()), kind, node);
+        VariableSymbol symbol = new VariableSymbol(name, varTypeSymbol, env.get().getSymbol(), kind, node);
         env.declare(name, symbol);
         node.updateSymbol(symbol);
     }
@@ -277,13 +279,21 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
 
         FunctionSymbol symbol = new FunctionSymbol(name, returnType,
                 modifiers.get(0), modifiers.get(1), modifiers.get(2), modifiers.get(3),
-                env.get().lookupSymbol(env.get().getName()), node);
+                env.get().getSymbol(), node);
 
+        SemanticSymbol existingSymbol = env.lookup(name);
         env.declare(name, symbol);
-        env.push(new Scope(env.get(), name));
+        env.push(new Scope(env.get(), name, symbol));
 
         ASTNode paramNode = (ASTNode) node.slot(4);
         analyze(paramNode, env);
+
+        if (existingSymbol instanceof FunctionSymbol existingFunc) {
+            boolean hasClash = hasClashingSignature(existingFunc, env.get().getAllParameters());
+            if (!existingFunc.isAbstract() && hasClash)
+                throw new LanguageServerException(node, "Function overload with clashing signature: " + name);
+
+        }
 
         ASTNode bodyNode = (ASTNode) node.slot(9);
         analyze(bodyNode, env);
@@ -294,8 +304,17 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         env.pop();
 
         node.updateSymbol(symbol);
+
     }
 
+    private boolean hasClashingSignature(FunctionSymbol existingFunc, List<VariableSymbol> actualParams) {
+
+        List<VariableSymbol> existingParams = existingFunc.parameters;
+        if (existingParams.size() != actualParams.size()) return false;
+        for (int i = 0; i < actualParams.size(); i++)
+            if (!Objects.equals(actualParams.get(i).type().name(), existingParams.get(i).type().name())) return false;
+        return true;
+    }
 
     private TypeLikeSymbol getReturnType(ASTNode returnTypeNode, boolean isConstructor, Environment env) {
         if (isConstructor) return null;

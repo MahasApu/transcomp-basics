@@ -26,7 +26,7 @@ public class Environment {
     public Environment(SyntaxNode tree) {
         scopes = new ArrayDeque<>();
         definitions = new HashMap<>();
-        push(new Scope(null, "GlobalScope"));
+        push(new Scope(null, "GlobalScope", null));
         initBuildInTypes();
         initDefinitions(tree.slot(0));
     }
@@ -58,8 +58,13 @@ public class Environment {
         }
     }
 
+
     public SemanticSymbol lookup(String name) {
         return get().lookupSymbol(name);
+    }
+
+    public SemanticSymbol lookupFunction(String name, List<VariableSymbol> params) {
+        return get().lookupFunction(name, params);
     }
 
     public void push(Scope scope) {
@@ -77,7 +82,7 @@ public class Environment {
 
     public SemanticSymbol getOwner() {
         Scope ownerScope = get().getParent();
-        return !Objects.isNull(ownerScope) ? get().lookupSymbol(ownerScope.getName()) : null;
+        return !Objects.isNull(ownerScope) ? ownerScope.getSymbol() : null;
     }
 
     public void define(String name, ASTNode node) {
@@ -93,7 +98,7 @@ public class Environment {
     }
 
     public boolean isInsideFunction() {
-        return lookup(get().getName()).kind().equals(SymbolKind.FUNCTION);
+        return get().getSymbol().kind().equals(SymbolKind.FUNCTION);
     }
 
     public void declare(String name, SemanticSymbol semanticSymbol) {
