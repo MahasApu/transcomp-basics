@@ -7,7 +7,10 @@ import syspro.tm.symbols.SemanticSymbol;
 import syspro.tm.symbols.SyntaxNodeWithSymbols;
 import syspro.tm.symbols.TypeSymbol;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
 
 public class SemanticModel implements syspro.tm.symbols.SemanticModel {
 

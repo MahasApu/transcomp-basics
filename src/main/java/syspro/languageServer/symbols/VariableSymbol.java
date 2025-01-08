@@ -1,5 +1,6 @@
 package syspro.languageServer.symbols;
 
+import syspro.parser.ast.ASTNode;
 import syspro.tm.parser.SyntaxNode;
 import syspro.tm.symbols.SemanticSymbol;
 import syspro.tm.symbols.SymbolKind;
@@ -9,9 +10,9 @@ public class VariableSymbol implements syspro.tm.symbols.VariableSymbol {
 
     private final String name;
     private final TypeLikeSymbol type;
-    private final SemanticSymbol owner;
-    private final SymbolKind kind;
-    private final SyntaxNode definition;
+    private SemanticSymbol owner;
+    private SymbolKind kind;
+    private SyntaxNode definition;
 
     public VariableSymbol(String name, TypeLikeSymbol type, SemanticSymbol owner, SymbolKind kind, SyntaxNode definition) {
         this.name = name;
@@ -20,6 +21,11 @@ public class VariableSymbol implements syspro.tm.symbols.VariableSymbol {
         this.kind = kind;
         this.definition = definition;
     }
+
+    public void updateDefinition(ASTNode node) {
+        this.definition = node;
+    }
+
 
     @Override
     public TypeLikeSymbol type() {

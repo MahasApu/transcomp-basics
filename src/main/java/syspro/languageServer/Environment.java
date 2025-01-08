@@ -1,11 +1,12 @@
 package syspro.languageServer;
 
 import syspro.languageServer.exceptions.LanguageServerException;
-import syspro.languageServer.semantic.SemanticNode;
 import syspro.languageServer.symbols.*;
 import syspro.parser.ast.ASTNode;
 import syspro.tm.lexer.Keyword;
+import syspro.tm.parser.Diagnostic;
 import syspro.tm.parser.SyntaxNode;
+import syspro.tm.parser.TextSpan;
 import syspro.tm.symbols.SemanticSymbol;
 import syspro.tm.symbols.SymbolKind;
 
@@ -17,13 +18,14 @@ import static syspro.tm.parser.SyntaxKind.TYPE_DEFINITION;
 public class Environment {
 
     private final Deque<Scope> scopes;
-    private final Map<String, SemanticNode> definitions;
-    private final List<TypeSymbol> unresolvedTypes;
+    private final Map<String, ASTNode> definitions;
+    private final List<TypeSymbol> unresolvedTypes = new ArrayList<>();
+    private final List<TextSpan> invalidRanges = new ArrayList<>();
+    private final List<Diagnostic> diagnostics = new ArrayList<>();
 
     public Environment(SyntaxNode tree) {
         scopes = new ArrayDeque<>();
         definitions = new HashMap<>();
-        unresolvedTypes = new ArrayList<>();
         push(new Scope(null, "GlobalScope"));
         initBuildInTypes();
     }
@@ -38,7 +40,7 @@ public class Environment {
             ASTNode identifier = new ASTNode(IDENTIFIER, null);
             ASTNode node = new ASTNode(TYPE_DEFINITION, null, keyword, identifier, null, null, null, null, null, null, null);
 
-            TypeSymbol symbol = new TypeSymbol(name, null, null, null, node);
+            TypeSymbol symbol = new TypeSymbol(name, node);
             get().declareSymbol(name, symbol);
         }
     }
@@ -78,7 +80,7 @@ public class Environment {
         return !Objects.isNull(ownerScope) ? get().lookupSymbol(ownerScope.getName()) : null;
     }
 
-    public void define(String name, SemanticNode node) {
+    public void define(String name, ASTNode node) {
         definitions.put(name, node);
     }
 
@@ -100,8 +102,13 @@ public class Environment {
             case VariableSymbol symbol -> get().declareSymbol(name, symbol);
             case FunctionSymbol symbol -> get().declareSymbol(name, symbol);
             case TypeParameterSymbol symbol -> get().declareSymbol(name, symbol);
-            default ->
-                    throw new LanguageServerException(new SemanticNode(semanticSymbol, new ASTNode(null, null)), "Unsupported symbol type for declaration: " + semanticSymbol);
+            default -> {
+                ASTNode node = new ASTNode(null, null);
+                node.updateSymbol(semanticSymbol);
+                throw new LanguageServerException(node, "Unsupported symbol type for declaration: " + semanticSymbol);
+            }
         }
     }
+
+
 }

@@ -1,6 +1,8 @@
 package syspro.languageServer;
 
+import syspro.languageServer.symbols.VariableSymbol;
 import syspro.tm.symbols.SemanticSymbol;
+import syspro.tm.symbols.SymbolKind;
 
 import java.util.*;
 
@@ -18,7 +20,7 @@ public class Scope {
 
     public void declareSymbol(String name, SemanticSymbol symbol) {
         if (symbols.containsKey(name))
-            throw new IllegalArgumentException("Symbol '" + name + "' is already declared in this scope.");
+            if (symbols.get(name).equals(symbol)) throw new IllegalArgumentException("Symbol '" + name + "' is already declared in this scope.");
         symbols.put(name, symbol);
     }
 
@@ -40,4 +42,14 @@ public class Scope {
     public String getName() {
         return name;
     }
+
+    public List<VariableSymbol> getAllLocals() {
+        return symbols.values().stream()
+                .filter(symbol -> symbol instanceof VariableSymbol)
+                .map(symbol -> (VariableSymbol) symbol)
+                .filter(symbol -> symbol.kind().equals(SymbolKind.LOCAL))
+                .toList();
+    }
+
+
 }

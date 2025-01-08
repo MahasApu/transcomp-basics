@@ -5,6 +5,7 @@ import syspro.tm.symbols.MemberSymbol;
 import syspro.tm.symbols.SymbolKind;
 import syspro.tm.symbols.TypeLikeSymbol;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static syspro.tm.lexer.Keyword.*;
@@ -12,21 +13,17 @@ import static syspro.tm.lexer.Keyword.*;
 public class TypeSymbol implements syspro.tm.symbols.TypeSymbol {
 
     private final String name;
-    private final List<? extends MemberSymbol> members;
-    private final List<? extends TypeLikeSymbol> typeArguments;
-    private final List<? extends syspro.tm.symbols.TypeSymbol> baseTypes;
-    private final SyntaxNode definition;
+    public List<? extends MemberSymbol> members;
+    public List<? extends TypeLikeSymbol> typeArguments;
+    public List<? extends TypeSymbol> baseTypes;
+    public SyntaxNode definition;
     private final SymbolKind kind;
 
-    public TypeSymbol(String name,
-                      List<? extends MemberSymbol> members,
-                      List<? extends TypeLikeSymbol> typeArguments,
-                      List<? extends syspro.tm.symbols.TypeSymbol> baseTypes,
-                      SyntaxNode definition) {
+    public TypeSymbol(String name, SyntaxNode definition) {
         this.name = name;
-        this.members = members;
-        this.typeArguments = typeArguments;
-        this.baseTypes = baseTypes;
+        this.members = new ArrayList<>();
+        this.typeArguments = new ArrayList<>();
+        this.baseTypes = new ArrayList<>();
         this.definition = definition;
         this.kind = defineSymbolKind();
     }
@@ -62,7 +59,7 @@ public class TypeSymbol implements syspro.tm.symbols.TypeSymbol {
 
     @Override
     public syspro.tm.symbols.TypeSymbol construct(List<? extends TypeLikeSymbol> typeArguments) {
-        return new TypeSymbol(name, members, typeArguments, baseTypes, definition);
+        return null;
     }
 
     @Override

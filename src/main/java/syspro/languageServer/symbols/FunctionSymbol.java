@@ -1,30 +1,27 @@
 package syspro.languageServer.symbols;
 
 import syspro.tm.parser.SyntaxNode;
-import syspro.tm.symbols.SemanticSymbol;
-import syspro.tm.symbols.SymbolKind;
-import syspro.tm.symbols.TypeLikeSymbol;
+import syspro.tm.symbols.*;
 import syspro.tm.symbols.VariableSymbol;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class FunctionSymbol implements syspro.tm.symbols.FunctionSymbol {
 
     private final String name;
     private final TypeLikeSymbol returnType;
-    private final List<? extends VariableSymbol> parameters;
-    private final List<? extends VariableSymbol> locals;
+    public List<syspro.languageServer.symbols.VariableSymbol> parameters = new ArrayList<>();
+    public List<syspro.languageServer.symbols.VariableSymbol> locals = new ArrayList<>();
     private final boolean isNative;
     private final boolean isVirtual;
     private final boolean isAbstract;
     private final boolean isOverride;
-    private final SemanticSymbol owner;
+    public SemanticSymbol owner;
     private final SyntaxNode definition;
 
     public FunctionSymbol(String name,
                           TypeLikeSymbol returnType,
-                          List<? extends VariableSymbol> parameters,
-                          List<? extends VariableSymbol> locals,
                           boolean isNative,
                           boolean isVirtual,
                           boolean isAbstract,
@@ -33,8 +30,6 @@ public class FunctionSymbol implements syspro.tm.symbols.FunctionSymbol {
                           SyntaxNode definition) {
         this.name = name;
         this.returnType = returnType;
-        this.parameters = parameters;
-        this.locals = locals;
         this.isNative = isNative;
         this.isVirtual = isVirtual;
         this.isAbstract = isAbstract;
@@ -42,6 +37,7 @@ public class FunctionSymbol implements syspro.tm.symbols.FunctionSymbol {
         this.owner = owner;
         this.definition = definition;
     }
+
 
     @Override
     public boolean isNative() {
