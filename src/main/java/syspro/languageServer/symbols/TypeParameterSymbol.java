@@ -13,18 +13,15 @@ public class TypeParameterSymbol implements syspro.tm.symbols.TypeParameterSymbo
 
     private final String name;
     private SemanticSymbol owner;
-    private final List<TypeLikeSymbol> bounds;
+    public List<TypeLikeSymbol> bounds;
+    private SyntaxNode definition;
 
-    public TypeParameterSymbol(String name, SemanticSymbol owner) {
+    public TypeParameterSymbol(String name, SemanticSymbol owner, SyntaxNode definition) {
         this.name = name;
         this.owner = owner;
         this.bounds = new ArrayList<>();
+        this.definition = definition;
     }
-
-    public void updateOwner(SemanticSymbol symbol) {
-        this.owner = symbol;
-    }
-
 
     @Override
     public SymbolKind kind() {
@@ -38,7 +35,7 @@ public class TypeParameterSymbol implements syspro.tm.symbols.TypeParameterSymbo
 
     @Override
     public SyntaxNode definition() {
-        return null;
+        return definition;
     }
 
     @Override

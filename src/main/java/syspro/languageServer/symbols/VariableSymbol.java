@@ -8,8 +8,8 @@ import syspro.tm.symbols.TypeLikeSymbol;
 
 public class VariableSymbol implements syspro.tm.symbols.VariableSymbol {
 
-    private final String name;
-    private final TypeLikeSymbol type;
+    private String name;
+    public TypeLikeSymbol type;
     private SemanticSymbol owner;
     private SymbolKind kind;
     private SyntaxNode definition;

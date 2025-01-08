@@ -6,6 +6,7 @@ import syspro.languageServer.symbols.VariableSymbol;
 import syspro.tm.symbols.MemberSymbol;
 import syspro.tm.symbols.SemanticSymbol;
 import syspro.tm.symbols.SymbolKind;
+import syspro.tm.symbols.TypeLikeSymbol;
 
 import java.util.*;
 
@@ -42,6 +43,7 @@ public class Scope {
             if (symbol instanceof TypeSymbol && this.name.equals("GlobalScope")) symbols.put(name, symbol);
             else if (symbols.containsKey(name))
                 throw new IllegalArgumentException("Symbol '" + name + "' is already declared in this scope.");
+            else symbols.put(name, symbol);
         }
         orderedDefinitions.add(symbol);
     }
@@ -112,6 +114,13 @@ public class Scope {
         return orderedDefinitions.stream()
                 .filter(symbol -> symbol instanceof MemberSymbol)
                 .map(symbol -> (MemberSymbol) symbol)
+                .toList();
+    }
+
+    public List<TypeLikeSymbol> getAllTypeParameters() {
+        return orderedDefinitions.stream()
+                .filter(symbol -> symbol instanceof TypeLikeSymbol)
+                .map(symbol -> (TypeLikeSymbol) symbol)
                 .toList();
     }
 

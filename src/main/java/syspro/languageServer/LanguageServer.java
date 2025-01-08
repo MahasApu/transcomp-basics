@@ -53,7 +53,6 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         ASTNode identifier = (ASTNode) node.slot(0);
 
 
-
         VariableSymbol symbol = new VariableSymbol(name, null, env.get().getSymbol(), SymbolKind.LOCAL, identifier);
         node.updateSymbol(symbol);
     }
@@ -135,29 +134,36 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
     private void analyzeTypeParameterDefinition(ASTNode node, Environment env) {
         String typeName = node.slot(0).token().toString();
 
-        if (env.isDefined(typeName))
-            throw new LanguageServerException(node, "Type parameter '" + typeName + "' is already defined.");
+        TypeLikeSymbol paramSymbol = (TypeLikeSymbol) env.lookup(typeName);
+        if (isNull(paramSymbol)) {
+            paramSymbol = new TypeParameterSymbol(typeName, env.get().getSymbol(), node);
+            env.declare(typeName, paramSymbol);
+        }
+
+        node.updateSymbol(paramSymbol);
 
         ASTNode boundsNode = (ASTNode) node.slot(1);
-        List<TypeSymbol> bounds = new ArrayList<>();
         if (!isNull(boundsNode)) {
             ASTNode boundList = (ASTNode) boundsNode.slot(1);
+
             for (int i = 0; i < boundList.slotCount(); i++) {
+
                 ASTNode boundNode = (ASTNode) boundList.slot(i);
                 String boundName = boundNode.slot(0).token().toString();
                 SemanticSymbol boundSymbol = env.lookup(boundName);
-                if (isNull(boundSymbol)) boundSymbol = new TypeSymbol(boundName, boundNode);
-                if (!(boundSymbol instanceof TypeSymbol))
+
+                if (isNull(boundSymbol)) {
+                    // TODO: use construct function here
+                    boundSymbol = new TypeSymbol(boundName, boundNode);
+                    env.declare(boundName, boundSymbol);
+                }
+                if (!(boundSymbol instanceof TypeLikeSymbol))
                     throw new LanguageServerException(boundNode, "Invalid type bound: " + boundName);
-
-                bounds.add((TypeSymbol) boundSymbol);
+                boundNode.updateSymbol(boundSymbol);
+                ((TypeParameterSymbol) paramSymbol).bounds.add((TypeLikeSymbol) boundSymbol);
             }
+
         }
-
-        TypeParameterSymbol paramSymbol = new TypeParameterSymbol(typeName, env.getOwner());
-
-        env.declare(typeName, paramSymbol);
-        node.updateSymbol(paramSymbol);
     }
 
 
@@ -171,7 +177,11 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         if (!isNull(typeNode)) {
             String typeName = typeNode.slot(0).token().toString();
             paramType = (TypeLikeSymbol) env.lookup(typeName);
-            if (isNull(paramType)) paramType = new TypeParameterSymbol(typeName, env.getOwner());
+            if (isNull(paramType)) {
+                paramType = new TypeParameterSymbol(typeName, env.getOwner(), typeNode);
+                env.declare(paramName, paramType);
+            }
+            ((ASTNode) typeNode.slot(0)).updateSymbol(paramType);
         }
 
         VariableSymbol paramSymbol = new VariableSymbol(paramName, paramType, env.get().getSymbol(), SymbolKind.PARAMETER, node);
@@ -183,19 +193,17 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
     //    return new ASTNode(TYPE_DEFINITION, token,
 //    keyword, name, lessThan, generics, greaterThan, typeBoundsList, indent, memberDef, dedent);
     private void analyzeTypeDefinition(ASTNode node, Environment env) {
-        SyntaxNode keyword = node.slot(0);
         SyntaxNode name = node.slot(1);
         String typeName = name.token().toString();
-
-
-        boolean isInterface = keyword.kind() == Keyword.INTERFACE;
 
         TypeSymbol typeSymbol = new TypeSymbol(typeName, node);
         env.declare(typeName, typeSymbol);
 
         env.push(new Scope(env.get(), typeName, typeSymbol));
 
-        typeSymbol.typeArguments = analyzeTypeParameters((ASTNode) node.slot(3), env);
+        analyze((ASTNode) node.slot(3), env);
+        typeSymbol.typeArguments = env.get().getAllTypeParameters();
+
         typeSymbol.baseTypes = analyzeBaseTypes((ASTNode) node.slot(5), env);
 
 
@@ -210,35 +218,24 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
 
     }
 
-    private List<TypeLikeSymbol> analyzeTypeParameters(ASTNode generics, Environment env) {
-        List<TypeLikeSymbol> typeParameters = new ArrayList<>();
-        if (!isNull(generics)) {
-            for (int i = 0; i < generics.slotCount(); i++) {
-                SyntaxNode paramNode = generics.slot(i);
-                String paramName = paramNode.slot(0).token().toString();
-
-                TypeLikeSymbol paramSymbol = (TypeLikeSymbol) env.lookup(paramName);
-                if (isNull(paramSymbol))
-                    paramSymbol = new TypeParameterSymbol(paramName, env.get().getSymbol());
-                typeParameters.add(paramSymbol);
-            }
-        }
-        return typeParameters;
-    }
-
 
     private List<TypeSymbol> analyzeBaseTypes(ASTNode typeBounds, Environment env) {
         List<TypeSymbol> baseTypes = new ArrayList<>();
         if (!isNull(typeBounds)) {
             SyntaxNode separatedList = typeBounds.slot(1);
             for (int i = 0; i < separatedList.slotCount(); i++) {
-                SyntaxNode boundNode = separatedList.slot(i);
-                String boundName = boundNode.slot(0).token().toString();
+                ASTNode baseNode = (ASTNode) separatedList.slot(i);
+                String boundName = baseNode.slot(0).token().toString();
 
                 SemanticSymbol baseType = env.lookup(boundName);
-                if (isNull(baseType)) baseType = new TypeSymbol(boundName, boundNode);
-                if (!(baseType instanceof TypeSymbol)) throw new LanguageServerException(boundNode, boundName);
+
+                if (isNull(baseType)) throw new IllegalArgumentException("Undefined type in base types.");
+
+                // TODO: use construct function here (resolve params types)
+//                if (baseType instanceof TypeSymbol symbol) return symbol.construct(params);
+                if (!(baseType instanceof TypeSymbol)) throw new LanguageServerException(baseNode, boundName);
                 baseTypes.add((TypeSymbol) baseType);
+                baseNode.updateSymbol(baseType);
             }
         }
         return baseTypes;
@@ -274,12 +271,13 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         String name = node.slot(2).token().toString();
         boolean isConstructor = name.equals("this");
 
-        List<Boolean> modifiers = getFuncTerminalsInfo((ASTNode) node.slot(0));
-        TypeLikeSymbol returnType = getReturnType((ASTNode) node.slot(7), isConstructor, env);
+        TypeSymbol owner = (TypeSymbol) env.get().getSymbol();
+        List<Boolean> modifiers = getFuncTerminalsInfo((ASTNode) node.slot(0), owner.isAbstract());
+        TypeLikeSymbol returnType = getReturnType((ASTNode) node.slot(7), isConstructor, env, (List<TypeLikeSymbol>) owner.typeArguments);
 
         FunctionSymbol symbol = new FunctionSymbol(name, returnType,
                 modifiers.get(0), modifiers.get(1), modifiers.get(2), modifiers.get(3),
-                env.get().getSymbol(), node);
+                owner, node);
 
         SemanticSymbol existingSymbol = env.lookup(name);
         env.declare(name, symbol);
@@ -316,18 +314,19 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         return true;
     }
 
-    private TypeLikeSymbol getReturnType(ASTNode returnTypeNode, boolean isConstructor, Environment env) {
-        if (isConstructor) return null;
+    private TypeLikeSymbol getReturnType(ASTNode returnTypeNode, boolean isConstructor, Environment env, List<TypeLikeSymbol> params) {
+        if (isConstructor) return (TypeLikeSymbol) env.get().getSymbol();
         if (isNull(returnTypeNode)) return null;
 
-        return (TypeLikeSymbol) env.lookup(returnTypeNode.slot(0).token().toString());
+       TypeLikeSymbol result = (TypeLikeSymbol) env.lookup(returnTypeNode.slot(0).token().toString());
+       if (!isNull(result) && result instanceof TypeSymbol symbol) return symbol.construct(params);
+       return result;
     }
 
 
-    private List<Boolean> getFuncTerminalsInfo(ASTNode terminalList) {
+    private List<Boolean> getFuncTerminalsInfo(ASTNode terminalList, boolean isAbstract) {
         boolean isNative = false;
-        boolean isVirtual = false;
-        boolean isAbstract = false;
+        boolean isVirtual = isAbstract;
         boolean isOverride = false;
 
         if (!isNull(terminalList)) {
@@ -341,6 +340,9 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
                 }
             }
         }
+
+        // TODO: add checks (BaseTypes)
+        if (isOverride || isAbstract) isVirtual = true;
 
         return List.of(isNative, isVirtual, isAbstract, isOverride);
     }
