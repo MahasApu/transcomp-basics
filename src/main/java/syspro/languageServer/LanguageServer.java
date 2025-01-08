@@ -14,7 +14,6 @@ import syspro.tm.symbols.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import static java.util.Objects.isNull;
 import static syspro.tm.parser.SyntaxKind.*;
@@ -22,12 +21,14 @@ import static syspro.tm.parser.SyntaxKind.*;
 public class LanguageServer implements syspro.tm.symbols.LanguageServer {
 
     private void analyze(ASTNode tree, Environment env) {
+        if (isNull(tree)) return;
         for (int i = 0; i < tree.slotCount(); i++) {
             visit((ASTNode) tree.slot(i), env);
         }
     }
 
     private void visit(ASTNode node, Environment env) {
+        if (isNull(node)) return;
         switch (node.kind()) {
             case TYPE_DEFINITION -> analyzeTypeDefinition(node, env);
             case VARIABLE_DEFINITION -> analyzeVariableDefinition(node, env);
@@ -42,9 +43,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
             case SUPER_EXPRESSION -> analyzeSuperExpression(node, env);
             case THIS_EXPRESSION -> analyzeThisExpression(node, env);
             case IDENTIFIER_NAME_EXPRESSION -> analyzeIdentifierNameExpression(node, env);
-            default -> {
-                analyze(node, env);
-            }
+            default -> analyze(node, env);
         }
     }
 
@@ -87,9 +86,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         if (!(owner instanceof TypeSymbol typeSymbol) || typeSymbol.baseTypes().isEmpty()) {
             throw new LanguageServerException(node, "'super' can only be used within a class with a base type.");
         }
-
     }
-
 
     // new ASTNode(ASSIGNMENT_STATEMENT, null, primary, eq, expr)
     private void analyzeAssignStatement(ASTNode node, Environment env) {
@@ -187,25 +184,22 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         SyntaxNode name = node.slot(1);
         String typeName = name.token().toString();
 
-        if (env.isDefined(typeName)) {
-            throw new LanguageServerException(node, "Type '" + typeName + "' is already defined.");
-        }
 
         boolean isInterface = keyword.kind() == Keyword.INTERFACE;
 
-        env.push(new Scope(env.get(), typeName));
         TypeSymbol typeSymbol = new TypeSymbol(typeName, node);
-
-        typeSymbol.typeArguments = analyzeTypeParameters((ASTNode) node.slot(3), typeSymbol);
-        typeSymbol.typeArguments = analyzeBaseTypes((ASTNode) node.slot(5), env);
-
         env.declare(typeName, typeSymbol);
 
-        ASTNode members = (ASTNode) node.slot(7);
-        List<SyntaxNode> nodes = analyzeTypeMembers(members, env, typeSymbol);
-        if (!nodes.isEmpty()) node.updateSlot(7, new ASTNode(members.kind(), members.token(), nodes));
+        env.push(new Scope(env.get(), typeName));
 
-        typeSymbol.members = nodes.stream().map(s -> (SyntaxNodeWithSymbols) s).map(SyntaxNodeWithSymbols::symbol).map(s -> (MemberSymbol) s).toList();
+        typeSymbol.typeArguments = analyzeTypeParameters((ASTNode) node.slot(3), env);
+        typeSymbol.baseTypes = analyzeBaseTypes((ASTNode) node.slot(5), env);
+
+
+        ASTNode members = (ASTNode) node.slot(7);
+        analyze(members, env);
+
+        typeSymbol.members = env.get().getAllMembers();;
 
         env.pop();
         node.updateSymbol(typeSymbol);
@@ -213,29 +207,23 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
 
     }
 
-    private List<TypeParameterSymbol> analyzeTypeParameters(ASTNode generics, TypeSymbol ownerSymbol) {
-        List<TypeParameterSymbol> typeParameters = new ArrayList<>();
+    private List<TypeLikeSymbol> analyzeTypeParameters(ASTNode generics, Environment env) {
+        List<TypeLikeSymbol> typeParameters = new ArrayList<>();
         if (!isNull(generics)) {
             for (int i = 0; i < generics.slotCount(); i++) {
                 SyntaxNode paramNode = generics.slot(i);
                 String paramName = paramNode.slot(0).token().toString();
-                TypeParameterSymbol paramSymbol = new TypeParameterSymbol(paramName, ownerSymbol);
+
+
+
+                TypeLikeSymbol paramSymbol = (TypeLikeSymbol) env.lookup(paramName);
+                if (isNull(paramSymbol)) paramSymbol = new TypeParameterSymbol(paramName, env.get().lookupSymbol(env.get().getName()));
                 typeParameters.add(paramSymbol);
             }
         }
         return typeParameters;
     }
 
-    private List<SyntaxNode> analyzeTypeMembers(ASTNode members, Environment env, TypeSymbol typeSymbol) {
-        List<SyntaxNode> nodes = new ArrayList<>();
-        if (!isNull(members)) {
-            for (int i = 0; i < members.slotCount(); i++) {
-                visit((ASTNode) members.slot(i), env);
-                nodes.add(members.slot(i));
-            }
-        }
-        return nodes;
-    }
 
     private List<TypeSymbol> analyzeBaseTypes(ASTNode typeBounds, Environment env) {
         List<TypeSymbol> baseTypes = new ArrayList<>();
@@ -271,8 +259,6 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
 
         SymbolKind kind = env.isInsideFunction() ? SymbolKind.LOCAL : SymbolKind.FIELD;
 
-
-
         VariableSymbol symbol = new VariableSymbol(name, varTypeSymbol, env.get().lookupSymbol(env.get().getName()), kind, node);
         env.declare(name, symbol);
         node.updateSymbol(symbol);
@@ -290,30 +276,20 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         TypeLikeSymbol returnType = getReturnType((ASTNode) node.slot(7), isConstructor, env);
 
         FunctionSymbol symbol = new FunctionSymbol(name, returnType,
-                modifiers.get(0), modifiers.get(1), modifiers.get(2), modifiers.get(3), null, node);
+                modifiers.get(0), modifiers.get(1), modifiers.get(2), modifiers.get(3),
+                env.get().lookupSymbol(env.get().getName()), node);
 
         env.declare(name, symbol);
         env.push(new Scope(env.get(), name));
 
-        ASTNode paramsNode = (ASTNode) node.slot(4);
-        List<SyntaxNode> nodes = analyzeFunctionParameters(paramsNode, env);
-        if (!nodes.isEmpty())
-            node.updateSlot(4, new ASTNode(paramsNode.kind(), paramsNode.token(), nodes));
+        ASTNode paramNode = (ASTNode) node.slot(4);
+        analyze(paramNode, env);
 
-        SyntaxNode bodyNode = node.slot(9);
-        List<SyntaxNode> bodyNodes = new ArrayList<>();
-        if (!isNull(bodyNode)) {
-            for (int i = 0; i < bodyNode.slotCount(); i++) {
-                visit((ASTNode) bodyNode.slot(i), env);
-                bodyNodes.add(bodyNode.slot(i));
-            }
-        }
+        ASTNode bodyNode = (ASTNode) node.slot(9);
+        analyze(bodyNode, env);
 
-        symbol.parameters = nodes.stream().map(s -> (SyntaxNodeWithSymbols) s)
-                .map(SyntaxNodeWithSymbols::symbol)
-                .map(s -> (VariableSymbol) s).toList();
+        symbol.parameters = env.get().getAllParameters();
         symbol.locals = env.get().getAllLocals();
-        symbol.owner = env.getOwner();
 
         env.pop();
 
@@ -348,17 +324,6 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         }
 
         return List.of(isNative, isVirtual, isAbstract, isOverride);
-    }
-
-    private List<SyntaxNode> analyzeFunctionParameters(ASTNode paramsNode, Environment env) {
-        List<SyntaxNode> nodes = new ArrayList<>();
-        if (!isNull(paramsNode)) {
-            for (int i = 0; i < paramsNode.slotCount(); i++) {
-                visit((ASTNode) paramsNode.slot(i), env);
-                nodes.add((paramsNode.slot(i)));
-            }
-        }
-        return nodes;
     }
 
     @Override

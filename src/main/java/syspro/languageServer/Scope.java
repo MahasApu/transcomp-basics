@@ -1,6 +1,7 @@
 package syspro.languageServer;
 
 import syspro.languageServer.symbols.VariableSymbol;
+import syspro.tm.symbols.MemberSymbol;
 import syspro.tm.symbols.SemanticSymbol;
 import syspro.tm.symbols.SymbolKind;
 
@@ -9,12 +10,12 @@ import java.util.*;
 public class Scope {
 
     private final Scope parent;
-    private final Map<String, SemanticSymbol> symbols;
+    private final LinkedHashMap<String, SemanticSymbol> symbols;
     private final String name;
 
     public Scope(Scope parent, String name) {
         this.parent = parent;
-        this.symbols = new HashMap<>();
+        this.symbols = new LinkedHashMap<>();
         this.name = name;
     }
 
@@ -48,6 +49,28 @@ public class Scope {
                 .filter(symbol -> symbol instanceof VariableSymbol)
                 .map(symbol -> (VariableSymbol) symbol)
                 .filter(symbol -> symbol.kind().equals(SymbolKind.LOCAL))
+                .toList();
+    }
+
+    public List<VariableSymbol> getAllParameters() {
+        return symbols.values().stream()
+                .filter(symbol -> symbol instanceof VariableSymbol)
+                .map(symbol -> (VariableSymbol) symbol)
+                .filter(symbol -> symbol.kind().equals(SymbolKind.PARAMETER))
+                .toList();
+    }
+
+
+    public List<MemberSymbol> getAllMembers() {
+        return symbols.values().stream()
+                .filter(symbol -> symbol instanceof MemberSymbol)
+                .map(symbol -> (MemberSymbol) symbol)
+                .toList();
+    }
+
+    private List<SemanticSymbol> getAll(SymbolKind kind) {
+        return symbols.values().stream()
+                .filter(s -> s.kind().equals(kind))
                 .toList();
     }
 

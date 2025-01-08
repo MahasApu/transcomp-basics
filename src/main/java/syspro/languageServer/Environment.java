@@ -28,6 +28,19 @@ public class Environment {
         definitions = new HashMap<>();
         push(new Scope(null, "GlobalScope"));
         initBuildInTypes();
+        initDefinitions(tree.slot(0));
+    }
+
+    private void initDefinitions(SyntaxNode tree) {
+        for (int i = 0; i < tree.slotCount(); i++) {
+            ASTNode node = (ASTNode) tree.slot(i);
+            String name = node.slot(1).token().toString();
+            if (definitions.containsKey(name)) throw new LanguageServerException(node, "Type already exists.");
+            TypeSymbol symbol = new TypeSymbol(name, node);
+            node.updateSymbol(symbol);
+            define(name, node);
+            declare(name, symbol);
+        }
     }
 
 
@@ -44,19 +57,6 @@ public class Environment {
             get().declareSymbol(name, symbol);
         }
     }
-
-//    public void addUnresolvedType(String name, TypeSymbol typeSymbol) {
-//        unresolvedTypes.add(typeSymbol);
-//    }
-//
-//    public void resolveUnresolvedTypes() {
-//        for (TypeSymbol unresolvedType : unresolvedTypes) {
-//            if (isDefined(unresolvedType.name())) {
-//                TypeSymbol resolvedType = (TypeSymbol) definitions.get(unresolvedType.name()).symbol();
-//            }
-//        }
-//        unresolvedTypes.clear();
-//    }
 
     public SemanticSymbol lookup(String name) {
         return get().lookupSymbol(name);
