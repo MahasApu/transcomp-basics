@@ -1,16 +1,12 @@
 package syspro.languageServer.symbols;
 
-import syspro.tm.lexer.BooleanLiteralToken;
 import syspro.tm.parser.SyntaxNode;
-import syspro.tm.symbols.MemberSymbol;
-import syspro.tm.symbols.SymbolKind;
-import syspro.tm.symbols.TypeLikeSymbol;
+import syspro.tm.symbols.*;
+import syspro.tm.symbols.TypeParameterSymbol;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 import static syspro.tm.lexer.Keyword.*;
-import static syspro.tm.parser.SyntaxKind.GENERIC_NAME_EXPRESSION;
 
 public class TypeSymbol implements syspro.tm.symbols.TypeSymbol {
 
@@ -72,42 +68,61 @@ public class TypeSymbol implements syspro.tm.symbols.TypeSymbol {
 
     @Override
     public syspro.tm.symbols.TypeSymbol construct(List<? extends TypeLikeSymbol> typeArguments) {
-        TypeSymbol constructedSymbol = new TypeSymbol(this.name, this.definition);
-        for (TypeLikeSymbol arg: typeArguments) {
-            List<MemberSymbol> constructedMembers = new ArrayList<>();
-            for (MemberSymbol member : members) {
-                constructedMembers.add(resolveMemberTypes(member, typeArguments));
-            }
 
-            constructedSymbol.members = constructedMembers;
-            List<TypeLikeSymbol> constructedTypeArgs = new ArrayList<>();
-            for (int i = 0; i < this.typeArguments.size(); i++) {
-                TypeLikeSymbol originalTypeArg = this.typeArguments.get(i);
-                TypeLikeSymbol resolvedType = resolveTypeArgument(originalTypeArg, typeArguments.get(i));
-                constructedTypeArgs.add(resolvedType);
-            }
-            constructedSymbol.typeArguments = constructedTypeArgs;
+        HashMap<String, TypeLikeSymbol> map = new HashMap<>();
+        for (int k = 0; k < this.typeArguments.size(); k++) {
+            map.put(this.typeArguments.get(k).name(), typeArguments.get(k));
         }
+
+        TypeSymbol constructedSymbol = new TypeSymbol(this.name, this.definition);
+
+
+        List<TypeLikeSymbol> constructedTypeArgs = new ArrayList<>();
+        for (TypeLikeSymbol typeArgument : this.typeArguments) {
+            TypeLikeSymbol resolvedType = resolveTypeArgument(typeArgument, map, constructedSymbol);
+            constructedTypeArgs.add(resolvedType);
+        }
+        constructedSymbol.typeArguments = constructedTypeArgs;
+
+
+        List<MemberSymbol> constructedMembers = new ArrayList<>();
+        for (MemberSymbol member : members) {
+            constructedMembers.add(resolveMemberTypes(member, map, constructedSymbol));
+        }
+        constructedSymbol.members = constructedMembers;
+
+
         return constructedSymbol;
     }
 
 
-    private TypeLikeSymbol resolveTypeArgument(TypeLikeSymbol original, TypeLikeSymbol typeArg) {
-        if (original.definition().kind().equals(GENERIC_NAME_EXPRESSION)) {
-            return typeArg;
+    private TypeLikeSymbol resolveTypeArgument(TypeLikeSymbol original, HashMap<String, TypeLikeSymbol> typeArg, TypeSymbol owner) {
+        if (original instanceof TypeParameterSymbol type) {
+            TypeLikeSymbol symbol = typeArg.get(type.name());
+            if(symbol == null) return new syspro.languageServer.symbols.TypeParameterSymbol(type.name(), owner, type.definition());
+            return symbol;
         }
         return original;
     }
 
-    private MemberSymbol resolveMemberTypes(MemberSymbol member, List<? extends TypeLikeSymbol> typeArguments) {
+    private MemberSymbol resolveMemberTypes(MemberSymbol member, HashMap<String, TypeLikeSymbol> typeArguments, TypeSymbol owner) {
+        MemberSymbol result = null;
         if (member instanceof VariableSymbol variable) {
-            variable.type = (resolveTypeArgument(variable.type(), typeArguments.getFirst()));
+            result = new VariableSymbol(variable.name(), resolveTypeArgument(variable.type(), typeArguments, owner), owner, variable.kind(), variable.definition());
+
+
         } else if (member instanceof FunctionSymbol function) {
+            List<VariableSymbol> params = new ArrayList<>();
             for (VariableSymbol param : function.parameters) {
-                param.type = (resolveTypeArgument(param.type(), typeArguments.getFirst()));
+                TypeLikeSymbol resolvedType = resolveTypeArgument(param.type(), typeArguments, owner);
+                params.add(new VariableSymbol(param.name(), resolvedType, owner, param.kind(), param.definition()));
             }
+            result = new FunctionSymbol(function.name(), resolveTypeArgument(function.returnType(), typeArguments, owner),
+                    function.isNative(), function.isVirtual(), function.isAbstract(), function.isOverride(),
+                    owner, function.definition());
+            ((FunctionSymbol) result).parameters = params;
         }
-        return member;
+        return result;
     }
 
     @Override

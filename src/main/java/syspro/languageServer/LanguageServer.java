@@ -7,7 +7,6 @@ import syspro.languageServer.symbols.TypeSymbol;
 import syspro.languageServer.symbols.VariableSymbol;
 import syspro.parser.Parser;
 import syspro.parser.ast.ASTNode;
-import syspro.tm.lexer.Keyword;
 import syspro.tm.parser.ParseResult;
 import syspro.tm.parser.SyntaxNode;
 import syspro.tm.symbols.*;
@@ -40,7 +39,6 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
             case IF_STATEMENT -> analyzeIfStatement(node, env);
             case FOR_STATEMENT -> analyzeForStatement(node, env);
             case WHILE_STATEMENT -> analyzeWhileStatement(node, env);
-            case ASSIGNMENT_STATEMENT -> analyzeAssignStatement(node, env);
             case SUPER_EXPRESSION -> analyzeSuperExpression(node, env);
             case THIS_EXPRESSION -> analyzeThisExpression(node, env);
             case IDENTIFIER_NAME_EXPRESSION -> analyzeIdentifierNameExpression(node, env);
@@ -90,16 +88,6 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         }
     }
 
-    // new ASTNode(ASSIGNMENT_STATEMENT, null, primary, eq, expr)
-    private void analyzeAssignStatement(ASTNode node, Environment env) {
-        ASTNode primary = (ASTNode) node.slot(0);
-        ASTNode expression = (ASTNode) node.slot(2);
-
-        visit(primary, env);
-        visit(expression, env);
-    }
-
-
     //   new ASTNode(WHILE_STATEMENT, null, whileNode, cond, indent, statements, dedent);
     private void analyzeWhileStatement(ASTNode node, Environment env) {
         ASTNode condition = (ASTNode) node.slot(0);
@@ -138,6 +126,9 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         if (isNull(paramSymbol)) {
             paramSymbol = new TypeParameterSymbol(typeName, env.get().getSymbol(), node);
             env.declare(typeName, paramSymbol);
+        } else if (paramSymbol.definition().kind().equals(GENERIC_NAME_EXPRESSION)) {
+            TypeSymbol symbol = (TypeSymbol) paramSymbol;
+            paramSymbol = symbol.construct(((TypeSymbol) env.get().getSymbol()).typeArguments);
         }
 
         node.updateSymbol(paramSymbol);
@@ -153,12 +144,12 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
                 SemanticSymbol boundSymbol = env.lookup(boundName);
 
                 if (isNull(boundSymbol)) {
-                    // TODO: use construct function here
                     boundSymbol = new TypeSymbol(boundName, boundNode);
                     env.declare(boundName, boundSymbol);
                 }
                 if (!(boundSymbol instanceof TypeLikeSymbol))
                     throw new LanguageServerException(boundNode, "Invalid type bound: " + boundName);
+
                 boundNode.updateSymbol(boundSymbol);
                 ((TypeParameterSymbol) paramSymbol).bounds.add((TypeLikeSymbol) boundSymbol);
             }
@@ -181,13 +172,24 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
                 paramType = new TypeParameterSymbol(typeName, env.getOwner(), typeNode);
                 env.declare(paramName, paramType);
             }
-            ((ASTNode) typeNode.slot(0)).updateSymbol(paramType);
+            paramType = construct(paramType, typeNode, env);
         }
 
         VariableSymbol paramSymbol = new VariableSymbol(paramName, paramType, env.get().getSymbol(), SymbolKind.PARAMETER, node);
         env.declare(paramName, paramSymbol);
         node.updateSymbol(paramSymbol);
 
+    }
+
+    private TypeLikeSymbol construct(TypeLikeSymbol symbol, ASTNode node, Environment env) {
+        if ( !isNull(node) && node.kind().equals(GENERIC_NAME_EXPRESSION)) {
+            ASTNode list = (ASTNode) node.slot(2);
+            List<TypeLikeSymbol> params = new ArrayList<>();
+            for (int j = 0; j < list.slotCount(); j += 2)
+                params.add((TypeLikeSymbol) env.lookup(list.slot(j).slot(0).token().toString()));
+            symbol = ((TypeSymbol) symbol).construct(params);
+        }
+        return symbol;
     }
 
     //    return new ASTNode(TYPE_DEFINITION, token,
@@ -227,13 +229,12 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
                 ASTNode baseNode = (ASTNode) separatedList.slot(i);
                 String boundName = baseNode.slot(0).token().toString();
 
-                SemanticSymbol baseType = env.lookup(boundName);
+                TypeLikeSymbol baseType = (TypeLikeSymbol) env.lookup(boundName);
 
                 if (isNull(baseType)) throw new IllegalArgumentException("Undefined type in base types.");
 
-                // TODO: use construct function here (resolve params types)
-//                if (baseType instanceof TypeSymbol symbol) return symbol.construct(params);
                 if (!(baseType instanceof TypeSymbol)) throw new LanguageServerException(baseNode, boundName);
+                baseType = construct(baseType, baseNode, env);
                 baseTypes.add((TypeSymbol) baseType);
                 baseNode.updateSymbol(baseType);
             }
@@ -254,6 +255,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         if (!isNull(type)) {
             String typeName = type.slot(0).token().toString();
             varTypeSymbol = (TypeLikeSymbol) env.lookup(typeName);
+            varTypeSymbol = construct(varTypeSymbol, (ASTNode) type, env);
         }
 
         SymbolKind kind = env.isInsideFunction() ? SymbolKind.LOCAL : SymbolKind.FIELD;
@@ -318,9 +320,9 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         if (isConstructor) return (TypeLikeSymbol) env.get().getSymbol();
         if (isNull(returnTypeNode)) return null;
 
-       TypeLikeSymbol result = (TypeLikeSymbol) env.lookup(returnTypeNode.slot(0).token().toString());
-       if (!isNull(result) && result instanceof TypeSymbol symbol) return symbol.construct(params);
-       return result;
+        TypeLikeSymbol result = (TypeLikeSymbol) env.lookup(returnTypeNode.slot(0).token().toString());
+        if (!isNull(result) && result instanceof TypeSymbol symbol) return symbol.construct(params);
+        return result;
     }
 
 
@@ -341,11 +343,11 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
             }
         }
 
-        // TODO: add checks (BaseTypes)
         if (isOverride || isAbstract) isVirtual = true;
 
         return List.of(isNative, isVirtual, isAbstract, isOverride);
     }
+
 
     @Override
     public SemanticModel buildModel(String code) {

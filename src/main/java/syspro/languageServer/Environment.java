@@ -9,6 +9,7 @@ import syspro.tm.parser.SyntaxNode;
 import syspro.tm.parser.TextSpan;
 import syspro.tm.symbols.SemanticSymbol;
 import syspro.tm.symbols.SymbolKind;
+import syspro.tm.symbols.TypeLikeSymbol;
 
 import java.util.*;
 
@@ -19,7 +20,6 @@ public class Environment {
 
     private final Deque<Scope> scopes;
     private final Map<String, ASTNode> definitions;
-    private final List<TypeSymbol> unresolvedTypes = new ArrayList<>();
     private final List<TextSpan> invalidRanges = new ArrayList<>();
     private final List<Diagnostic> diagnostics = new ArrayList<>();
 
@@ -37,6 +37,14 @@ public class Environment {
             String name = node.slot(1).token().toString();
             if (definitions.containsKey(name)) throw new LanguageServerException(node, "Type already exists.");
             TypeSymbol symbol = new TypeSymbol(name, node);
+
+            ASTNode params = (ASTNode) node.slot(3);
+            List<TypeLikeSymbol> symbolArgs = new ArrayList<>();
+            if (params != null)
+                for (int j = 0; j < params.slotCount(); j += 2) {
+                    symbolArgs.add(new TypeParameterSymbol(params.slot(j).slot(0).token().toString(), symbol, params.slot(j)));
+                }
+            symbol.typeArguments = symbolArgs;
             node.updateSymbol(symbol);
             define(name, node);
             declare(name, symbol);
