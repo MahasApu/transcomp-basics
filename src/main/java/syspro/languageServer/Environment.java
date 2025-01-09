@@ -4,9 +4,7 @@ import syspro.languageServer.exceptions.LanguageServerException;
 import syspro.languageServer.symbols.*;
 import syspro.parser.ast.ASTNode;
 import syspro.tm.lexer.Keyword;
-import syspro.tm.parser.Diagnostic;
-import syspro.tm.parser.SyntaxNode;
-import syspro.tm.parser.TextSpan;
+import syspro.tm.parser.*;
 import syspro.tm.symbols.SemanticSymbol;
 import syspro.tm.symbols.SymbolKind;
 import syspro.tm.symbols.TypeLikeSymbol;
@@ -20,8 +18,8 @@ public class Environment {
 
     private final Deque<Scope> scopes;
     private final Map<String, ASTNode> definitions;
-    private final List<TextSpan> invalidRanges = new ArrayList<>();
-    private final List<Diagnostic> diagnostics = new ArrayList<>();
+    private final Collection<TextSpan> invalidRanges = new ArrayList<>();
+    private final Collection<Diagnostic> diagnostics = new ArrayList<>();
 
     public Environment(SyntaxNode tree) {
         scopes = new ArrayDeque<>();
@@ -121,6 +119,26 @@ public class Environment {
                 throw new LanguageServerException(node, "Unsupported symbol type for declaration: " + semanticSymbol);
             }
         }
+    }
+
+
+    public Collection<TextSpan> invalidRanges() {
+        return invalidRanges;
+    }
+
+    public Collection<Diagnostic> diagnostics() {
+        return diagnostics;
+    }
+
+    public void addInvalidRange(TextSpan textSpan, ErrorCode error) {
+
+
+        invalidRanges.add(textSpan);
+        diagnostics.add(new Diagnostic(
+                new DiagnosticInfo(error, null),
+                textSpan,
+                null
+        ));
     }
 
 

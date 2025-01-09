@@ -1,5 +1,9 @@
 package syspro.languageServer;
 
+import syspro.languageServer.diagnostics.DefinitionError;
+import syspro.languageServer.diagnostics.FunctionError;
+import syspro.languageServer.diagnostics.TypeParameterError;
+import syspro.languageServer.diagnostics.VariableError;
 import syspro.languageServer.exceptions.LanguageServerException;
 import syspro.languageServer.symbols.FunctionSymbol;
 import syspro.languageServer.symbols.TypeParameterSymbol;
@@ -76,7 +80,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
     private void analyzeThisExpression(ASTNode node, Environment env) {
         SemanticSymbol owner = env.getOwner();
         if (!(owner instanceof TypeSymbol)) {
-            throw new LanguageServerException(node, "'this' can only be used within a class or object.");
+            env.addInvalidRange(node.span(), new VariableError("'this' can only be used within a class or object."));
         }
     }
 
@@ -84,7 +88,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
     private void analyzeSuperExpression(ASTNode node, Environment env) {
         SemanticSymbol owner = env.getOwner();
         if (!(owner instanceof TypeSymbol typeSymbol) || typeSymbol.baseTypes().isEmpty()) {
-            throw new LanguageServerException(node, "'super' can only be used within a class with a base type.");
+            env.addInvalidRange(node.span(), new VariableError("'super' can only be used within a class or object."));
         }
     }
 
@@ -126,11 +130,8 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         if (isNull(paramSymbol)) {
             paramSymbol = new TypeParameterSymbol(typeName, env.get().getSymbol(), node);
             env.declare(typeName, paramSymbol);
-        } else if (paramSymbol.definition().kind().equals(GENERIC_NAME_EXPRESSION)) {
-            TypeSymbol symbol = (TypeSymbol) paramSymbol;
-            paramSymbol = symbol.construct(((TypeSymbol) env.get().getSymbol()).typeArguments);
         }
-
+        paramSymbol = construct(paramSymbol, (ASTNode) paramSymbol.definition(), env);
         node.updateSymbol(paramSymbol);
 
         ASTNode boundsNode = (ASTNode) node.slot(1);
@@ -143,17 +144,14 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
                 String boundName = boundNode.slot(0).token().toString();
                 SemanticSymbol boundSymbol = env.lookup(boundName);
 
-                if (isNull(boundSymbol)) {
-                    boundSymbol = new TypeSymbol(boundName, boundNode);
-                    env.declare(boundName, boundSymbol);
+                if (!(boundSymbol instanceof TypeLikeSymbol)) {
+                    env.addInvalidRange(boundNode.span(), new TypeParameterError("Invalid type bound: " + boundName));
+                } else {
+                    boundSymbol = construct((TypeLikeSymbol) boundSymbol, boundNode, env);
+                    boundNode.updateSymbol(boundSymbol);
+                    ((TypeParameterSymbol) paramSymbol).bounds.add((TypeLikeSymbol) boundSymbol);
                 }
-                if (!(boundSymbol instanceof TypeLikeSymbol))
-                    throw new LanguageServerException(boundNode, "Invalid type bound: " + boundName);
-
-                boundNode.updateSymbol(boundSymbol);
-                ((TypeParameterSymbol) paramSymbol).bounds.add((TypeLikeSymbol) boundSymbol);
             }
-
         }
     }
 
@@ -175,14 +173,16 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
             paramType = construct(paramType, typeNode, env);
         }
 
-        VariableSymbol paramSymbol = new VariableSymbol(paramName, paramType, env.get().getSymbol(), SymbolKind.PARAMETER, node);
+        VariableSymbol paramSymbol = new VariableSymbol(paramName, paramType,
+                env.get().getSymbol(),
+                SymbolKind.PARAMETER, node);
         env.declare(paramName, paramSymbol);
         node.updateSymbol(paramSymbol);
 
     }
 
     private TypeLikeSymbol construct(TypeLikeSymbol symbol, ASTNode node, Environment env) {
-        if ( !isNull(node) && node.kind().equals(GENERIC_NAME_EXPRESSION)) {
+        if (!isNull(node) && node.kind().equals(GENERIC_NAME_EXPRESSION)) {
             ASTNode list = (ASTNode) node.slot(2);
             List<TypeLikeSymbol> params = new ArrayList<>();
             for (int j = 0; j < list.slotCount(); j += 2)
@@ -227,13 +227,13 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
             SyntaxNode separatedList = typeBounds.slot(1);
             for (int i = 0; i < separatedList.slotCount(); i++) {
                 ASTNode baseNode = (ASTNode) separatedList.slot(i);
-                String boundName = baseNode.slot(0).token().toString();
+                String baseName = baseNode.slot(0).token().toString();
 
-                TypeLikeSymbol baseType = (TypeLikeSymbol) env.lookup(boundName);
+                TypeLikeSymbol baseType = (TypeLikeSymbol) env.lookup(baseName);
 
-                if (isNull(baseType)) throw new IllegalArgumentException("Undefined type in base types.");
+                if (isNull(baseType) || !(baseType instanceof TypeSymbol))
+                    env.addInvalidRange(baseNode.span(), new DefinitionError("Undefined type in base types: " + baseName));
 
-                if (!(baseType instanceof TypeSymbol)) throw new LanguageServerException(baseNode, boundName);
                 baseType = construct(baseType, baseNode, env);
                 baseTypes.add((TypeSymbol) baseType);
                 baseNode.updateSymbol(baseType);
@@ -247,8 +247,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
     private void analyzeVariableDefinition(ASTNode node, Environment env) {
         String name = node.slot(1).token().toString();
         if (env.isDefined(name))
-            throw new LanguageServerException(node, "Variable '" + name + "' is already defined.");
-
+            env.addInvalidRange(node.span(), new DefinitionError("Variable '" + name + "' is already defined." + name));
 
         SyntaxNode type = node.slot(3);
         TypeLikeSymbol varTypeSymbol = null;
@@ -291,8 +290,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         if (existingSymbol instanceof FunctionSymbol existingFunc) {
             boolean hasClash = hasClashingSignature(existingFunc, env.get().getAllParameters());
             if (!existingFunc.isAbstract() && hasClash)
-                throw new LanguageServerException(node, "Function overload with clashing signature: " + name);
-
+                env.addInvalidRange(node.span(), new FunctionError("Function overload with clashing signature: " + name));
         }
 
         ASTNode bodyNode = (ASTNode) node.slot(9);
@@ -359,9 +357,12 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
 
         analyze((ASTNode) tree.slot(0), env);
 
+        env.invalidRanges().addAll(result.invalidRanges());
+        env.diagnostics().addAll(result.diagnostics());
 
         return new syspro.languageServer.semantic.SemanticModel(
                 tree,
-                result.invalidRanges(), result.diagnostics());
+                env.invalidRanges(),
+                env.diagnostics());
     }
 }
