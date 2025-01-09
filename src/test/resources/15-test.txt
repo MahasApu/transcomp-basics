@@ -1,0 +1,5 @@
+class Clash3<K>
+  abstract def apply(arg: K): Boolean
+
+  def apply(arg: UInt64): Boolean
+    return true

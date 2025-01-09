@@ -1,0 +1,12 @@
+object Factorial
+
+  def iterative(n: Int64): Int64
+    var result = 1
+    for i in Range<UInt64>(1, n + 1)
+      result = result * i
+    return result
+
+  def recursive(n: Int64): Int64
+    if n > 1
+      return n * recursive(n - 1)
+    return 1

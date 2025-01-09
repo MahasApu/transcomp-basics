@@ -26,12 +26,12 @@ class RangeIterator<T> <: Iterator<T> # Supports only numeric T, no way to expre
     def this(range: Range<T>)
         this._range = range
         this._next = range.start
-    def hasNext(): Boolean
+    override def hasNext(): Boolean
         if PrimitiveIntrinsics<T>.greater(_range.step, PrimitiveIntrinsics<T>.default())
             return PrimitiveIntrinsics<T>.less(_next, _range.end)
         else
             return PrimitiveIntrinsics<T>.greater(_next, _range.end)
-    def next(): T
+    override def next(): T
         if !hasNext()
             System.failFast("No next element is available in Range<T>")
         val result = _next
@@ -53,16 +53,16 @@ class Range<T> <: Iterable<T>
         this.start = PrimitiveIntrinsics<T>.default()
         this.end = end
         this.step = PrimitiveIntrinsics<T>.one()
-    def iterator(): Iterator<T>
+    override def iterator(): Iterator<T>
         return RangeIterator<T>(this)
 class ArrayIterator<T> <: Iterator<T>
     val _array: Array<T>
     var _index: UInt64 = 0
     def this(array: Array<T>)
         this._array = array
-    def hasNext(): Boolean
+    override def hasNext(): Boolean
         return _index < _array.length
-    def next(): T
+    override def next(): T
         val result = _array[_index] # Will failFast if necessary
         _index = _index + 1u64
         return result
@@ -76,10 +76,10 @@ class Array<T> <: Iterable<T>
         var copy = length
         if newLength < copy
             copy = newLength
-        for i in RangeUInt64(copy)
+        for i in Range<UInt64>(copy)
             result[i] = this[i]
         return result
-    def iterator(): Iterator<T>
+    override def iterator(): Iterator<T>
         return ArrayIterator<T>(this)
 class String
     val _runes: Array<Rune>
@@ -92,9 +92,9 @@ class ArrayListIterator<T>
     var _index: UInt64 = 0
     def this(list: ArrayList<T>)
         this._list = list
-    def hasNext(): Boolean
+    override def hasNext(): Boolean
         return _index < _list.length
-    def next(): T
+    override def next(): T
         if !hasNext()
             System.failFast("No next element is available in ArrayList<T>")
         val result = _list[_index] # Will failFast if necessary
@@ -118,7 +118,7 @@ class ArrayList<T> <: Iterable<T>
         if index >= _size
             System.failFast("List element write out of bounds")
         _data[index] = value
-    def iterator(): Iterator<T>
+    override def iterator(): Iterator<T>
         return ArrayListIterator<T>(this)
     def toArray(): Array<T>
         return _data.clone(_size, PrimitiveIntrinsics<T>.default())

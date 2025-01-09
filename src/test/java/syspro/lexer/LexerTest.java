@@ -1,8 +1,11 @@
 package syspro.lexer;
 
 import org.junit.jupiter.api.Test;
+import syspro.parser.Parser;
 import syspro.tm.lexer.Token;
 
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
@@ -40,9 +43,9 @@ class LexerTest {
     void test1() {
         //Supplementary character
         String s = """
-class Indent1
-    def notMultipleOf2(): Boolean
-      return true""";
+                class Indent1
+                    def notMultipleOf2(): Boolean
+                      return true""";
         Lexer lexer = new Lexer();
         lexer.lex(s).forEach(t -> System.out.println(t.toString()));
     }
@@ -69,7 +72,6 @@ class Indent1
     }
 
 
-
     @Test
     void testForIdentifier() {
         String s = "_ddgdh";
@@ -92,7 +94,7 @@ class Indent1
         String SHORT_ESCAPE = """
                 \\[0abfnrtv'\\]""";
         String UNICODE_ESCAPE = """
-               [\\\\U+]*[0-9A-F]{4,5}""";
+                [\\\\U+]*[0-9A-F]{4,5}""";
         String ESCAPE = String.format("(%s|%s)", SHORT_ESCAPE, UNICODE_ESCAPE);
         String SIMPLE_RUNE_CHARACTER = """
                 [^'\\\r\n]""";
@@ -109,9 +111,9 @@ class Indent1
     @Test
     void test4() {
         String strTest = """
-class Indent1
-   def notMultipleOf2(): Boolean
-      return true""";
+                class Indent1
+                   def notMultipleOf2(): Boolean
+                      return true""";
 
         Lexer lexer = new Lexer();
         lexer.lex(strTest).forEach(System.out::println);
@@ -121,36 +123,36 @@ class Indent1
     @Test
     void test5() {
         String strTest = """
-\n
-  class Indent8
-val x = 42
-""";
+                \n
+                  class Indent8
+                val x = 42
+                """;
 
         Lexer lexer = new Lexer();
-        for (Token t: lexer.lex(strTest)) {
-            System.out.printf("%s   %d %d\n",t.toString(), t.start, t.end);
+        for (Token t : lexer.lex(strTest)) {
+            System.out.printf("%s   %d %d\n", t.toString(), t.start, t.end);
         }
     }
 
     @Test
     void test6() {
         String strTest = """
-                class 𝚨𐍁
-                    def nameImplicit(): String
-                        return "𝚨­𐍁"
-                    def nameExͯplicit(): String
-                        return "\\U+1D6A8\\U+00AD\\U+10341"
-                    def letterImplicit(): Rune
-                        return '𝚨'
-                    def letterExͯplicit(): Rune
-                        return '\\U+1D6A8'
-                    def number﻿Value(): Int64
-                        return 90
-                    def numberImplicit(): Rune
-                        return '𐍁'
-                    def numberExͯplicit(): Rune
-                        return '\\U+10341'
-""";
+                                class 𝚨𐍁
+                                    def nameImplicit(): String
+                                        return "𝚨­𐍁"
+                                    def nameExͯplicit(): String
+                                        return "\\U+1D6A8\\U+00AD\\U+10341"
+                                    def letterImplicit(): Rune
+                                        return '𝚨'
+                                    def letterExͯplicit(): Rune
+                                        return '\\U+1D6A8'
+                                    def number﻿Value(): Int64
+                                        return 90
+                                    def numberImplicit(): Rune
+                                        return '𐍁'
+                                    def numberExͯplicit(): Rune
+                                        return '\\U+10341'
+                """;
 //        System.out.println(is("𝚨𐍁"));
         System.out.println();
         Lexer lexer = new Lexer();
@@ -197,11 +199,11 @@ val x = 42
     void test23() {
 
         String strTest =
-           """
-class Indent1
-   def notMultipleOf2(): Boolean
-      return true
-           """;
+                """
+                        class Indent1
+                           def notMultipleOf2(): Boolean
+                              return true
+                        """;
         Lexer lexer = new Lexer();
         lexer.lex(strTest).forEach(System.out::println);
     }
@@ -219,16 +221,100 @@ class Indent1
     }
 
     @Test
-    void test9() {
-//        String strTest = "\n\n\n var x = €n  \n";
-        String strTest = "6997i32 ssasf<T>  var x = €\0i=8";
-        Lexer lexer = new Lexer();
-        lexer.lex(strTest).forEach(System.out::println);
+    void test9() throws IOException {
+        String strTest0 = "class Indent6\n" +
+                "  def memberIsAt2(): Boolean\n" +
+                "    return true | false\n" +
+                "    # The spaces in the following line are ignored for identation purposes,\n" +
+                "    # as per EOF rule\n";
+        String strTest1 = "class Bad1\n    val x = €\n";
+        String strTest2 = "class Bad1\n    val x = €      val";
+
+        Parser parser = new Parser();
+        parser.parse(strTest0);
+    }
+
+    @Test
+    void continueTest() throws IOException {
+        String strTest = """
+                
+                class Indent7
+                  def memberIsAt2(): Boolean
+                    return 10 + 11
+                    if true""";
+
+        Parser parser = new Parser();
+        parser.parse(strTest);
     }
 
 
+    @Test
+    void varValTest() throws IOException {
+        String strTest = "val x = 10";
+
+        Parser parser = new Parser();
+        parser.parse(strTest);
+    }
+
+    @Test
+    void defTest() throws IOException {
+        String strTest =
+                """
+                        class MyClass\n
+                          def memberIsAt2(): Boolean
+                            var x = 10\n
+                            return true
+                        """;
+
+        Parser parser = new Parser();
+        parser.parse(strTest);
+    }
 
 
+    @Test
+    void objectGenericsTest() throws IOException {
+        String strTest = """
+                class ArrayListIterator<T>
+                    val _list: ArrayList<T>
+                    var _index: UInt64 = 0
+                    def this(list: ArrayList<T>)
+                        this._list = list
+                    def hasNext(): Boolean
+                        return _index < _list.length
+                    def next(): T
+                        if !hasNext()
+                            System.failFast("No next element is available in ArrayList<T>")
+                        val result = _list[_index] # Will failFast if necessary
+                        _index = _index + 1u64
+                        return result""";
 
+        Parser parser = new Parser();
+        parser.parse(strTest);
+    }
 
+    @Test
+    void factorialTest() throws IOException {
+        String strTest = """
+class a
+  def a()
+    val x = ArrayList<ArrayList<Int64>>()
+    x.add(16 > > 2)
+           
+    """;
+
+        String strTest2 = """
+class a
+  def a()
+    if 128u64 << 1 > 4
+      x.add(16 > > 2)
+    if c < 2048u32
+      x.add(c)
+           
+    """;
+        Parser parser = new Parser();
+        parser.parse(strTest2);
+
+    }
 }
+
+

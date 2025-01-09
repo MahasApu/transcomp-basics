@@ -85,13 +85,17 @@ public class UnicodePattern {
         return isNumberLiteral(s);
     }
 
-    static public boolean isRune(String s) {
+
+    static public String runePattern() {
         String SHORT_ESCAPE = "\\[0abfnrtv'\\]";
         String UNICODE_ESCAPE = "[\\\\U+]*[0-9A-F]{4,5}";
         String ESCAPE = String.format("(%s|%s)", SHORT_ESCAPE, UNICODE_ESCAPE);
         String SIMPLE_RUNE_CHARACTER = "[^'\\\r\n]";
-        String RUNE_CHARACTER = String.format("(%s|%s)", SIMPLE_RUNE_CHARACTER, ESCAPE);
-        return Pattern.compile(RUNE_CHARACTER).matcher(s).matches();
+        return String.format("(%s|%s)", SIMPLE_RUNE_CHARACTER, ESCAPE);
+    }
+
+    static public boolean isRune(String s) {
+        return Pattern.compile(runePattern()).matcher(s).matches();
     }
 
 

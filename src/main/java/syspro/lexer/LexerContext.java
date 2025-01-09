@@ -6,11 +6,12 @@ import syspro.tm.lexer.*;
 import java.util.ArrayList;
 import java.util.Objects;
 
-import static syspro.lexer.State.ObservedState.*;
+import static syspro.lexer.State.ObservedState.DEFAULT;
+import static syspro.lexer.State.ObservedState.INDENTATION;
 import static syspro.lexer.utils.UnicodeReader.codePointToString;
 import static syspro.lexer.utils.UnicodeReader.getUnicodePoints;
 
-public class Context {
+public class LexerContext {
 
     public int countLeadingTrivia;
     public int countTrailingTrivia;
@@ -25,11 +26,12 @@ public class Context {
     public int[] codePoints;
     public StringBuilder symbolBuffer;
     public ArrayList<Token> tokens;
+    public int lessThanCounter;
 
     public State.ObservedState curState;
 
 
-    public Context(String source) {
+    public LexerContext(String source) {
         this.curState = DEFAULT;
         this.symbolBuffer = new StringBuilder();
         this.tokens = new ArrayList<Token>();
@@ -84,7 +86,8 @@ public class Context {
 
     void putToken(Token token) {
         if (Objects.isNull(token)) {
-            tokens.add(new BadToken(nextPos - countLeadingTrivia, nextPos + countTrailingTrivia, countLeadingTrivia, countTrailingTrivia));
+            BadToken badToken = new BadToken(nextPos - countLeadingTrivia, nextPos + countTrailingTrivia, countLeadingTrivia, countTrailingTrivia);
+            tokens.add(badToken);
             curState = DEFAULT;
             resetBuffer();
         } else {
@@ -128,7 +131,7 @@ public class Context {
 
     boolean isNewline(int pos) {
         assert pos < codePoints.length || pos + 1 < codePoints.length;
-        return codePoints[pos] == '\n' || (codePoints[pos - 1] == '\r' && codePoints[pos] == '\n');
+        return codePoints[pos] == '\n' || (codePoints[pos] == '\r' && codePoints[pos + 1] == '\n');
 
     }
 
@@ -157,7 +160,8 @@ public class Context {
                     new StringLiteralToken(s.start, s.end + countLeadingTrivia, s.leadingTriviaLength, s.trailingTriviaLength + countLeadingTrivia, s.value);
             case SymbolToken s ->
                     new SymbolToken(s.start, s.end + countLeadingTrivia, s.leadingTriviaLength, s.trailingTriviaLength + countLeadingTrivia, s.symbol);
-            case BadToken b -> new BadToken(b.start, b.end + countLeadingTrivia, b.leadingTriviaLength, b.trailingTriviaLength + countLeadingTrivia);
+            case BadToken b ->
+                    new BadToken(b.start, b.end + countLeadingTrivia, b.leadingTriviaLength, b.trailingTriviaLength + countLeadingTrivia);
             default -> throw new IllegalStateException("Unexpected value: " + tokenToUpdate);
         };
     }

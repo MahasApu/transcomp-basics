@@ -1,0 +1,10 @@
+interface Clash1<T>
+  def apply(arg: T): Boolean
+
+class A <: Clash1<UInt64>
+  def apply(arg: UInt64): Boolean
+    return true
+
+class B <: Clash1<Int64>
+  abstract def apply(arg: Int64): Boolean
+    return true
