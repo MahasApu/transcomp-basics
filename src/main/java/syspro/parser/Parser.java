@@ -191,7 +191,7 @@ public class Parser implements syspro.tm.parser.Parser {
     private ASTNode parseTypeParameterDefinition(ParserContext ctx) {
         ASTNode identifier = ctx.expected("Expected identifier in type parameters.", IDENTIFIER);
         ASTNode typeBound = null;
-        if (ctx.is(BOUND)) typeBound = parseTypeBound(ctx);
+        if (ctx.match(BOUND)) typeBound = parseTypeBound(ctx);
         return new ASTNode(TYPE_PARAMETER_DEFINITION, null, identifier, typeBound);
     }
 

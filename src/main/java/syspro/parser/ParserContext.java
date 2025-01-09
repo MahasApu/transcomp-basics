@@ -230,6 +230,7 @@ public class ParserContext {
     }
 
     public boolean definitionStarts() {
+        if (isEOF()) return false;
         return switch (kind()) {
             case VAL, VAR, ABSTRACT, VIRTUAL, OVERRIDE, NATIVE, DEF -> true;
             default -> false;
