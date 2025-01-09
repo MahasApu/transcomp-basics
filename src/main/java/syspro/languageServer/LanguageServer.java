@@ -137,7 +137,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         if (!isNull(boundsNode)) {
             ASTNode boundList = (ASTNode) boundsNode.slot(1);
 
-            for (int i = 0; i < boundList.slotCount(); i++) {
+            for (int i = 0; i < boundList.slotCount(); i += 2) {
 
                 ASTNode boundNode = (ASTNode) boundList.slot(i);
                 String boundName = boundNode.slot(0).token().toString();
@@ -224,7 +224,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         List<TypeSymbol> baseTypes = new ArrayList<>();
         if (!isNull(typeBounds)) {
             SyntaxNode separatedList = typeBounds.slot(1);
-            for (int i = 0; i < separatedList.slotCount(); i++) {
+            for (int i = 0; i < separatedList.slotCount(); i += 2) {
                 ASTNode baseNode = (ASTNode) separatedList.slot(i);
                 String baseName = baseNode.slot(0).token().toString();
 
