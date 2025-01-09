@@ -39,10 +39,6 @@ public class ASTNode implements SyntaxNodeWithSymbols {
         return symbol;
     }
 
-    public void updateSlot(int index, SyntaxNode node) {
-        slots.set(index, node);
-    }
-
     @Override
     public AnySyntaxKind kind() {
         return kind;

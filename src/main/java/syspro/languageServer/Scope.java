@@ -8,7 +8,10 @@ import syspro.tm.symbols.SemanticSymbol;
 import syspro.tm.symbols.SymbolKind;
 import syspro.tm.symbols.TypeLikeSymbol;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Objects;
 
 import static java.util.Objects.isNull;
 
@@ -49,7 +52,7 @@ public class Scope {
     }
 
 
-    private boolean hasClashingSignature(FunctionSymbol existingFunc, List<VariableSymbol> actualParams) {
+    public boolean hasClashingSignature(FunctionSymbol existingFunc, List<VariableSymbol> actualParams) {
         List<VariableSymbol> existingParams = existingFunc.parameters;
         if (existingParams.size() != actualParams.size()) return false;
         for (int i = 0; i < actualParams.size(); i++)
@@ -75,10 +78,6 @@ public class Scope {
         }
         if (parent != null) return parent.lookupFunction(name, params);
         return null;
-    }
-
-    public boolean isDeclaredLocally(String name) {
-        return symbols.containsKey(name);
     }
 
     public Scope getParent() {
@@ -123,12 +122,4 @@ public class Scope {
                 .map(symbol -> (TypeLikeSymbol) symbol)
                 .toList();
     }
-
-    private List<SemanticSymbol> getAll(SymbolKind kind) {
-        return symbols.values().stream()
-                .filter(s -> s.kind().equals(kind))
-                .toList();
-    }
-
-
 }

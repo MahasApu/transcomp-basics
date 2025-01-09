@@ -1,7 +1,9 @@
 package syspro.languageServer.symbols;
 
 import syspro.tm.parser.SyntaxNode;
-import syspro.tm.symbols.*;
+import syspro.tm.symbols.SemanticSymbol;
+import syspro.tm.symbols.SymbolKind;
+import syspro.tm.symbols.TypeLikeSymbol;
 import syspro.tm.symbols.VariableSymbol;
 
 import java.util.ArrayList;

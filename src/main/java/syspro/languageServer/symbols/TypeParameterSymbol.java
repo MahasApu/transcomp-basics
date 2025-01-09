@@ -2,7 +2,6 @@ package syspro.languageServer.symbols;
 
 import syspro.tm.parser.SyntaxNode;
 import syspro.tm.symbols.SemanticSymbol;
-import syspro.tm.symbols.SemanticSymbolWithOwner;
 import syspro.tm.symbols.SymbolKind;
 import syspro.tm.symbols.TypeLikeSymbol;
 

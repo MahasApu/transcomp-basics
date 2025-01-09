@@ -10,13 +10,17 @@ import syspro.languageServer.symbols.TypeSymbol;
 import syspro.languageServer.symbols.VariableSymbol;
 import syspro.parser.Parser;
 import syspro.parser.ast.ASTNode;
+import syspro.tm.parser.ErrorCode;
 import syspro.tm.parser.ParseResult;
 import syspro.tm.parser.SyntaxNode;
-import syspro.tm.symbols.*;
+import syspro.tm.symbols.SemanticModel;
+import syspro.tm.symbols.SemanticSymbol;
+import syspro.tm.symbols.SymbolKind;
+import syspro.tm.symbols.TypeLikeSymbol;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+import java.util.function.Function;
 
 import static java.util.Objects.isNull;
 import static syspro.tm.parser.SyntaxKind.*;
@@ -49,17 +53,8 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         }
     }
 
-    private void analyzeIdentifierNameExpression(ASTNode node, Environment env) {
-        String name = node.slot(0).token().toString();
-        ASTNode identifier = (ASTNode) node.slot(0);
 
-
-        VariableSymbol symbol = new VariableSymbol(name, null, env.get().getSymbol(), SymbolKind.LOCAL, identifier);
-        node.updateSymbol(symbol);
-    }
-
-
-    // new ASTNode(FOR_STATEMENT, null, forNode, primary, in, expr, indent, statements, dedent)
+    // FOR_STATEMENT - forNode, primary, in, expr, indent, statements, dedent
     private void analyzeForStatement(ASTNode node, Environment env) {
         ASTNode primary = (ASTNode) node.slot(1);
         ASTNode iterable = (ASTNode) node.slot(3);
@@ -76,22 +71,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
 
     }
 
-    private void analyzeThisExpression(ASTNode node, Environment env) {
-        SemanticSymbol owner = env.getOwner();
-        if (!(owner instanceof TypeSymbol)) {
-            env.addInvalidRange(node.span(), new VariableError("'this' can only be used within a class or object."));
-        }
-    }
-
-
-    private void analyzeSuperExpression(ASTNode node, Environment env) {
-        SemanticSymbol owner = env.getOwner();
-        if (!(owner instanceof TypeSymbol typeSymbol) || typeSymbol.baseTypes().isEmpty()) {
-            env.addInvalidRange(node.span(), new VariableError("'super' can only be used within a class or object."));
-        }
-    }
-
-    //   new ASTNode(WHILE_STATEMENT, null, whileNode, cond, indent, statements, dedent);
+    // WHILE_STATEMENT - whileNode, cond, indent, statements, dedent
     private void analyzeWhileStatement(ASTNode node, Environment env) {
         ASTNode condition = (ASTNode) node.slot(0);
         ASTNode body = (ASTNode) node.slot(1);
@@ -101,8 +81,8 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
 
     }
 
-    // ASTNode(IF_STATEMENT, null, ifNode, cond, indentTrue, statementsTrue, dedentTrue,
-    //                             elseNode, indentFalse, statementsFalse, dedentFalse);
+    // IF_STATEMENT - ifNode, cond, indentTrue, statementsTrue, dedentTrue,
+    //                  elseNode, indentFalse, statementsFalse, dedentFalse
     private void analyzeIfStatement(ASTNode node, Environment env) {
         ASTNode condition = (ASTNode) node.slot(1);
         ASTNode thenBlock = (ASTNode) node.slot(3);
@@ -111,7 +91,28 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         visit(condition, env);
         if (!isNull(elseBlock)) visit(thenBlock, env);
         if (!isNull(elseBlock)) visit(elseBlock, env);
+    }
 
+    private void analyzeIdentifierNameExpression(ASTNode node, Environment env) {
+        String name = node.slot(0).token().toString();
+        ASTNode identifier = (ASTNode) node.slot(0);
+
+        VariableSymbol symbol = new VariableSymbol(name, null, env.get().getSymbol(), SymbolKind.LOCAL, identifier);
+        node.updateSymbol(symbol);
+    }
+
+    private void analyzeThisExpression(ASTNode node, Environment env) {
+        SemanticSymbol owner = env.getOwner();
+        if (!(owner instanceof TypeSymbol)) {
+            env.addInvalidRange(node.span(), new VariableError("'this' can only be used within a class or object."));
+        }
+    }
+
+    private void analyzeSuperExpression(ASTNode node, Environment env) {
+        SemanticSymbol owner = env.getOwner();
+        if (!(owner instanceof TypeSymbol typeSymbol) || typeSymbol.baseTypes().isEmpty()) {
+            env.addInvalidRange(node.span(), new VariableError("'super' can only be used within a class or object."));
+        }
     }
 
     private void analyzeExpressionStatement(ASTNode node, Environment env) {
@@ -120,8 +121,31 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
     }
 
 
-    // ASTNode(PARAMETER_DEFINITION, null, identifier, colon, name)
+    // Analyzes a list of type arguments or parameters in a separated list.
+    private <T extends TypeLikeSymbol> void analyzeSeparatedList(
+            ASTNode separatedList,
+            List<? super T> symbols,
+            Function<String, ErrorCode> errorConstructor,
+            Environment env) {
+
+        for (int i = 0; i < separatedList.slotCount(); i += 2) {
+            ASTNode node = (ASTNode) separatedList.slot(i);
+            String nodeName = node.slot(0).token().toString();
+            SemanticSymbol symbol = env.lookup(nodeName);
+
+            // Check if the type has been defined.
+            if (!(symbol instanceof TypeLikeSymbol)) {
+                env.addInvalidRange(node.span(), errorConstructor.apply("Undefined type: " + nodeName));
+            } else {
+                T typedSymbol = (T) construct((TypeLikeSymbol) symbol, node, env);
+                node.updateSymbol(typedSymbol);
+                symbols.add(typedSymbol);
+            }
+        }
+    }
+
     // Only for type definition (in case of generics)
+    // PARAMETER_DEFINITION - identifier, colon, name
     private void analyzeTypeParameterDefinition(ASTNode node, Environment env) {
         String typeName = node.slot(0).token().toString();
 
@@ -136,37 +160,23 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         ASTNode boundsNode = (ASTNode) node.slot(1);
         if (!isNull(boundsNode)) {
             ASTNode boundList = (ASTNode) boundsNode.slot(1);
-
-            for (int i = 0; i < boundList.slotCount(); i += 2) {
-
-                ASTNode boundNode = (ASTNode) boundList.slot(i);
-                String boundName = boundNode.slot(0).token().toString();
-                SemanticSymbol boundSymbol = env.lookup(boundName);
-
-                if (!(boundSymbol instanceof TypeLikeSymbol)) {
-                    env.addInvalidRange(boundNode.span(), new TypeParameterError("Invalid type bound: " + boundName));
-                } else {
-                    boundSymbol = construct((TypeLikeSymbol) boundSymbol, boundNode, env);
-                    boundNode.updateSymbol(boundSymbol);
-                    ((TypeParameterSymbol) paramSymbol).bounds.add((TypeLikeSymbol) boundSymbol);
-                }
-            }
+            analyzeSeparatedList(boundList, ((TypeParameterSymbol) paramSymbol).bounds, TypeParameterError::new, env);
         }
     }
 
-
-    // new ASTNode(PARAMETER_DEFINITION, null, identifier, colon, name);
-    // Only in function definition
+    // Only in function definition.
+    // PARAMETER_DEFINITION - identifier, colon, name
     private void analyzeParameterDefinition(ASTNode node, Environment env) {
         String paramName = node.slot(0).token().toString();
         ASTNode typeNode = (ASTNode) node.slot(2);
 
         SemanticSymbol paramType = null;
+
         if (!isNull(typeNode)) {
             String typeName = typeNode.slot(0).token().toString();
             paramType = env.lookup(typeName);
 
-            if (isNull(paramType) || !(paramType instanceof TypeLikeSymbol))
+            if (!(paramType instanceof TypeLikeSymbol))
                 env.addInvalidRange(typeNode.span(), new DefinitionError("Undefined type in base types: " + paramName));
             else paramType = construct((TypeLikeSymbol) paramType, typeNode, env);
         }
@@ -179,19 +189,25 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
 
     }
 
+    // Constructs a specialized version of a TypeSymbol based on
+    // the given node and environment (by calling construct function).
     private TypeLikeSymbol construct(TypeLikeSymbol symbol, ASTNode node, Environment env) {
         if (!isNull(node) && node.kind().equals(GENERIC_NAME_EXPRESSION)) {
             ASTNode list = (ASTNode) node.slot(2);
             List<TypeLikeSymbol> params = new ArrayList<>();
-            for (int j = 0; j < list.slotCount(); j += 2)
-                params.add((TypeLikeSymbol) env.lookup(list.slot(j).slot(0).token().toString()));
+
+            for (int i = 0; i < list.slotCount(); i += 2) {
+                String name = list.slot(i).slot(0).token().toString();
+                params.add((TypeLikeSymbol) env.lookup(name));
+            }
             symbol = ((TypeSymbol) symbol).construct(params);
         }
         return symbol;
     }
 
-    //    return new ASTNode(TYPE_DEFINITION, token,
-//    keyword, name, lessThan, generics, greaterThan, typeBoundsList, indent, memberDef, dedent);
+
+    //    TYPE_DEFINITION - keyword, name, lessThan, generics, greaterThan,
+    //                      typeBoundsList, indent, memberDef, dedent
     private void analyzeTypeDefinition(ASTNode node, Environment env) {
         SyntaxNode name = node.slot(1);
         String typeName = name.token().toString();
@@ -201,15 +217,15 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
 
         env.push(new Scope(env.get(), typeName, typeSymbol));
 
+        // Analyze type arguments of type.
         analyze((ASTNode) node.slot(3), env);
         typeSymbol.typeArguments = env.get().getAllTypeParameters();
 
-        typeSymbol.baseTypes = analyzeBaseTypes((ASTNode) node.slot(5), env);
+        // Analyze base types of type.
+        analyzeBaseTypes((ASTNode) node.slot(5), env);
 
-
-        ASTNode members = (ASTNode) node.slot(7);
-        analyze(members, env);
-
+        // Analyze members (such as functions, variables) of type.
+        analyze((ASTNode) node.slot(7), env);
         typeSymbol.members = env.get().getAllMembers();
 
         env.pop();
@@ -218,30 +234,16 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
 
     }
 
-
-    private List<TypeSymbol> analyzeBaseTypes(ASTNode typeBounds, Environment env) {
-        List<TypeSymbol> baseTypes = new ArrayList<>();
+    // SEPARATED_LIST [NameExpression, & - separator]
+    private void analyzeBaseTypes(ASTNode typeBounds, Environment env) {
         if (!isNull(typeBounds)) {
-            SyntaxNode separatedList = typeBounds.slot(1);
-            for (int i = 0; i < separatedList.slotCount(); i += 2) {
-                ASTNode baseNode = (ASTNode) separatedList.slot(i);
-                String baseName = baseNode.slot(0).token().toString();
-
-                TypeLikeSymbol baseType = (TypeLikeSymbol) env.lookup(baseName);
-
-                if (isNull(baseType) || !(baseType instanceof TypeSymbol))
-                    env.addInvalidRange(baseNode.span(), new DefinitionError("Undefined type in base types: " + baseName));
-
-                baseType = construct(baseType, baseNode, env);
-                baseTypes.add((TypeSymbol) baseType);
-                baseNode.updateSymbol(baseType);
-            }
+            ASTNode separatedList = (ASTNode) typeBounds.slot(1);
+            List<TypeSymbol> baseTypes = ((TypeSymbol) env.get().getSymbol()).baseTypes;
+            analyzeSeparatedList(separatedList, baseTypes, DefinitionError::new, env);
         }
-        return baseTypes;
-
     }
 
-    //    new ASTNode(VARIABLE_DEFINITION, null, keyword, name, colon, typeExpr, eq, valueExpr);
+    //  VARIABLE_DEFINITION - keyword, name, colon, typeExpr, eq, valueExpr
     private void analyzeVariableDefinition(ASTNode node, Environment env) {
         String name = node.slot(1).token().toString();
         if (env.isDefined(name))
@@ -263,16 +265,17 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
     }
 
 
-    //    ASTNode node = new ASTNode(FUNCTION_DEFINITION, null,
-    //    terminalList, def, functionName, openParen, parameterList, closeParen,
-    //            colon, returnType, indent, functionBody, dedent);
+    //    FUNCTION_DEFINITION - terminalList, def, functionName, openParen, parameterList, closeParen,
+    //                          colon, returnType, indent, functionBody, dedent
     private void analyzeFunctionDefinition(ASTNode node, Environment env) {
         String name = node.slot(2).token().toString();
         boolean isConstructor = name.equals("this");
 
         TypeSymbol owner = (TypeSymbol) env.get().getSymbol();
+
+        // Return modifiers (native, virtual, abstract, override) and the type of the function.
         List<Boolean> modifiers = getFuncTerminalsInfo((ASTNode) node.slot(0), owner.isAbstract());
-        TypeLikeSymbol returnType = getReturnType((ASTNode) node.slot(7), isConstructor, env, (List<TypeLikeSymbol>) owner.typeArguments);
+        TypeLikeSymbol returnType = getReturnType((ASTNode) node.slot(7), isConstructor, env, owner.typeArguments);
 
         FunctionSymbol symbol = new FunctionSymbol(name, returnType,
                 modifiers.get(0), modifiers.get(1), modifiers.get(2), modifiers.get(3),
@@ -285,14 +288,15 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         ASTNode paramNode = (ASTNode) node.slot(4);
         analyze(paramNode, env);
 
+        // Check whether there is a defined function with the same signature.
         if (existingSymbol instanceof FunctionSymbol existingFunc) {
-            boolean hasClash = hasClashingSignature(existingFunc, env.get().getAllParameters());
+            boolean hasClash = env.hasClashingSignature(existingFunc, env.get().getAllParameters());
             if (!existingFunc.isAbstract() && hasClash)
                 env.addInvalidRange(node.span(), new FunctionError("Function overload with clashing signature: " + name));
         }
 
-        ASTNode bodyNode = (ASTNode) node.slot(9);
-        analyze(bodyNode, env);
+        // Analyze body of the function.
+        analyze((ASTNode) node.slot(9), env);
 
         symbol.parameters = env.get().getAllParameters();
         symbol.locals = env.get().getAllLocals();
@@ -303,19 +307,11 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
 
     }
 
-    private boolean hasClashingSignature(FunctionSymbol existingFunc, List<VariableSymbol> actualParams) {
-
-        List<VariableSymbol> existingParams = existingFunc.parameters;
-        if (existingParams.size() != actualParams.size()) return false;
-        for (int i = 0; i < actualParams.size(); i++)
-            if (!Objects.equals(actualParams.get(i).type().name(), existingParams.get(i).type().name())) return false;
-        return true;
-    }
-
-    private TypeLikeSymbol getReturnType(ASTNode returnTypeNode, boolean isConstructor, Environment env, List<TypeLikeSymbol> params) {
+    private TypeLikeSymbol getReturnType(ASTNode returnTypeNode, boolean isConstructor, Environment env, List<? extends TypeLikeSymbol> params) {
         if (isConstructor) return (TypeLikeSymbol) env.get().getSymbol();
         if (isNull(returnTypeNode)) return null;
 
+        // Get the already defined (maybe not) type symbol by returning the name of the TypeNode.
         TypeLikeSymbol result = (TypeLikeSymbol) env.lookup(returnTypeNode.slot(0).token().toString());
         if (!isNull(result) && result instanceof TypeSymbol symbol) return symbol.construct(params);
         return result;
@@ -339,6 +335,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
             }
         }
 
+        // Functions of interfaces are always virtual in SysPro language.
         if (isOverride || isAbstract) isVirtual = true;
 
         return List.of(isNative, isVirtual, isAbstract, isOverride);

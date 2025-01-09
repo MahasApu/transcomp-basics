@@ -2,7 +2,10 @@ package syspro.languageServer;
 
 import syspro.languageServer.diagnostics.DefinitionError;
 import syspro.languageServer.exceptions.LanguageServerException;
-import syspro.languageServer.symbols.*;
+import syspro.languageServer.symbols.FunctionSymbol;
+import syspro.languageServer.symbols.TypeParameterSymbol;
+import syspro.languageServer.symbols.TypeSymbol;
+import syspro.languageServer.symbols.VariableSymbol;
 import syspro.parser.ast.ASTNode;
 import syspro.tm.lexer.Keyword;
 import syspro.tm.parser.*;
@@ -17,19 +20,25 @@ import static syspro.tm.parser.SyntaxKind.TYPE_DEFINITION;
 
 public class Environment {
 
+    // A stack of scopes representing the current context in the environment.
     private final Deque<Scope> scopes;
+
+    // A map storing definitions of symbols by their names.
     private final Map<String, ASTNode> definitions;
+
     private final Collection<TextSpan> invalidRanges = new ArrayList<>();
     private final Collection<Diagnostic> diagnostics = new ArrayList<>();
 
     public Environment(SyntaxNode tree) {
-        scopes = new ArrayDeque<>();
-        definitions = new HashMap<>();
+        this.scopes = new ArrayDeque<>();
+        this.definitions = new HashMap<>();
         push(new Scope(null, "GlobalScope", null));
         initBuildInTypes();
         initDefinitions(tree.slot(0));
     }
 
+    // This method only initializes the first scope of the syntax tree
+    // and does not perform a full initialization of all symbols or scopes.
     private void initDefinitions(SyntaxNode tree) {
         for (int i = 0; i < tree.slotCount(); i++) {
             ASTNode node = (ASTNode) tree.slot(i);
@@ -52,7 +61,6 @@ public class Environment {
 
 
     private void initBuildInTypes() {
-
         List<String> names = List.of("Int32", "Int64", "UInt32", "UInt64", "Boolean", "Rune");
         for (String name : names) {
 
@@ -68,10 +76,6 @@ public class Environment {
 
     public SemanticSymbol lookup(String name) {
         return get().lookupSymbol(name);
-    }
-
-    public SemanticSymbol lookupFunction(String name, List<VariableSymbol> params) {
-        return get().lookupFunction(name, params);
     }
 
     public void push(Scope scope) {
@@ -100,12 +104,12 @@ public class Environment {
         return definitions.containsKey(name) || !Objects.isNull(lookup(name));
     }
 
-    public boolean isDefinedLocally(String name) {
-        return get().isDeclaredLocally(name);
-    }
-
     public boolean isInsideFunction() {
         return get().getSymbol().kind().equals(SymbolKind.FUNCTION);
+    }
+
+    public boolean hasClashingSignature(FunctionSymbol existingFunc, List<VariableSymbol> actualParams) {
+        return get().hasClashingSignature(existingFunc, actualParams);
     }
 
     public void declare(String name, SemanticSymbol semanticSymbol, ASTNode node) {
@@ -117,7 +121,6 @@ public class Environment {
             default -> addInvalidRange(node.span(), new DefinitionError("Unsupported symbol type for declaration: " + semanticSymbol));
         }
     }
-
 
     public Collection<TextSpan> invalidRanges() {
         return invalidRanges;

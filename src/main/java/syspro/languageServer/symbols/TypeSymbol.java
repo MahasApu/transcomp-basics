@@ -1,10 +1,14 @@
 package syspro.languageServer.symbols;
 
 import syspro.tm.parser.SyntaxNode;
-import syspro.tm.symbols.*;
+import syspro.tm.symbols.MemberSymbol;
+import syspro.tm.symbols.SymbolKind;
+import syspro.tm.symbols.TypeLikeSymbol;
 import syspro.tm.symbols.TypeParameterSymbol;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 import static syspro.tm.lexer.Keyword.*;
 
@@ -13,7 +17,7 @@ public class TypeSymbol implements syspro.tm.symbols.TypeSymbol {
     private final String name;
     public List<? extends MemberSymbol> members;
     public List<? extends TypeLikeSymbol> typeArguments;
-    public List<? extends TypeSymbol> baseTypes;
+    public List<TypeSymbol> baseTypes;
     public SyntaxNode definition;
     private final SymbolKind kind;
     public syspro.tm.symbols.TypeSymbol originalDefinition;
@@ -76,7 +80,6 @@ public class TypeSymbol implements syspro.tm.symbols.TypeSymbol {
 
         TypeSymbol constructedSymbol = new TypeSymbol(this.name, this.definition);
 
-
         List<TypeLikeSymbol> constructedTypeArgs = new ArrayList<>();
         for (TypeLikeSymbol typeArgument : this.typeArguments) {
             TypeLikeSymbol resolvedType = resolveTypeArgument(typeArgument, map, constructedSymbol);
@@ -91,16 +94,14 @@ public class TypeSymbol implements syspro.tm.symbols.TypeSymbol {
         }
         constructedSymbol.members = constructedMembers;
 
-
         return constructedSymbol;
     }
 
 
     private TypeLikeSymbol resolveTypeArgument(TypeLikeSymbol original, HashMap<String, TypeLikeSymbol> typeArg, TypeSymbol owner) {
         if (original instanceof TypeParameterSymbol type) {
-            TypeLikeSymbol symbol = typeArg.get(type.name());
-            if(symbol == null) return new syspro.languageServer.symbols.TypeParameterSymbol(type.name(), owner, type.definition());
-            return symbol;
+            return typeArg.getOrDefault(type.name(),
+                    new syspro.languageServer.symbols.TypeParameterSymbol(type.name(), owner, type.definition()));
         }
         return original;
     }
@@ -108,11 +109,13 @@ public class TypeSymbol implements syspro.tm.symbols.TypeSymbol {
     private MemberSymbol resolveMemberTypes(MemberSymbol member, HashMap<String, TypeLikeSymbol> typeArguments, TypeSymbol owner) {
         MemberSymbol result = null;
         if (member instanceof VariableSymbol variable) {
-            result = new VariableSymbol(variable.name(), resolveTypeArgument(variable.type(), typeArguments, owner), owner, variable.kind(), variable.definition());
-
+            result = new VariableSymbol(variable.name(),
+                    resolveTypeArgument(variable.type(), typeArguments, owner),
+                    owner, variable.kind(), variable.definition());
 
         } else if (member instanceof FunctionSymbol function) {
             List<VariableSymbol> params = new ArrayList<>();
+
             for (VariableSymbol param : function.parameters) {
                 TypeLikeSymbol resolvedType = resolveTypeArgument(param.type(), typeArguments, owner);
                 params.add(new VariableSymbol(param.name(), resolvedType, owner, param.kind(), param.definition()));
