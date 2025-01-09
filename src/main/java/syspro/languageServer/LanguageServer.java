@@ -161,18 +161,17 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         String paramName = node.slot(0).token().toString();
         ASTNode typeNode = (ASTNode) node.slot(2);
 
-        TypeLikeSymbol paramType = null;
+        SemanticSymbol paramType = null;
         if (!isNull(typeNode)) {
             String typeName = typeNode.slot(0).token().toString();
-            paramType = (TypeLikeSymbol) env.lookup(typeName);
-            if (isNull(paramType)) {
-                paramType = new TypeParameterSymbol(typeName, env.getOwner(), typeNode);
-                env.declare(paramName, paramType, typeNode);
-            }
-            paramType = construct(paramType, typeNode, env);
+            paramType = env.lookup(typeName);
+
+            if (isNull(paramType) || !(paramType instanceof TypeLikeSymbol))
+                env.addInvalidRange(typeNode.span(), new DefinitionError("Undefined type in base types: " + paramName));
+            else paramType = construct((TypeLikeSymbol) paramType, typeNode, env);
         }
 
-        VariableSymbol paramSymbol = new VariableSymbol(paramName, paramType,
+        VariableSymbol paramSymbol = new VariableSymbol(paramName, (TypeLikeSymbol) paramType,
                 env.get().getSymbol(),
                 SymbolKind.PARAMETER, node);
         env.declare(paramName, paramSymbol, node);
