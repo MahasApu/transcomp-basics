@@ -4,7 +4,6 @@ import syspro.languageServer.diagnostics.DefinitionError;
 import syspro.languageServer.diagnostics.FunctionError;
 import syspro.languageServer.diagnostics.TypeParameterError;
 import syspro.languageServer.diagnostics.VariableError;
-import syspro.languageServer.exceptions.LanguageServerException;
 import syspro.languageServer.symbols.FunctionSymbol;
 import syspro.languageServer.symbols.TypeParameterSymbol;
 import syspro.languageServer.symbols.TypeSymbol;
@@ -72,7 +71,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
 
         ((VariableSymbol) primary.symbol()).updateDefinition(node);
         node.updateSymbol(primary.symbol());
-        env.declare(node.symbol().name(), node.symbol());
+        env.declare(node.symbol().name(), node.symbol(), node);
         primary.updateSymbol(null);
 
     }
@@ -129,7 +128,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         TypeLikeSymbol paramSymbol = (TypeLikeSymbol) env.lookup(typeName);
         if (isNull(paramSymbol)) {
             paramSymbol = new TypeParameterSymbol(typeName, env.get().getSymbol(), node);
-            env.declare(typeName, paramSymbol);
+            env.declare(typeName, paramSymbol, node);
         }
         paramSymbol = construct(paramSymbol, (ASTNode) paramSymbol.definition(), env);
         node.updateSymbol(paramSymbol);
@@ -168,7 +167,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
             paramType = (TypeLikeSymbol) env.lookup(typeName);
             if (isNull(paramType)) {
                 paramType = new TypeParameterSymbol(typeName, env.getOwner(), typeNode);
-                env.declare(paramName, paramType);
+                env.declare(paramName, paramType, typeNode);
             }
             paramType = construct(paramType, typeNode, env);
         }
@@ -176,7 +175,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         VariableSymbol paramSymbol = new VariableSymbol(paramName, paramType,
                 env.get().getSymbol(),
                 SymbolKind.PARAMETER, node);
-        env.declare(paramName, paramSymbol);
+        env.declare(paramName, paramSymbol, node);
         node.updateSymbol(paramSymbol);
 
     }
@@ -199,7 +198,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         String typeName = name.token().toString();
 
         TypeSymbol typeSymbol = new TypeSymbol(typeName, node);
-        env.declare(typeName, typeSymbol);
+        env.declare(typeName, typeSymbol, node);
 
         env.push(new Scope(env.get(), typeName, typeSymbol));
 
@@ -260,7 +259,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
         SymbolKind kind = env.isInsideFunction() ? SymbolKind.LOCAL : SymbolKind.FIELD;
 
         VariableSymbol symbol = new VariableSymbol(name, varTypeSymbol, env.get().getSymbol(), kind, node);
-        env.declare(name, symbol);
+        env.declare(name, symbol, node);
         node.updateSymbol(symbol);
     }
 
@@ -281,7 +280,7 @@ public class LanguageServer implements syspro.tm.symbols.LanguageServer {
                 owner, node);
 
         SemanticSymbol existingSymbol = env.lookup(name);
-        env.declare(name, symbol);
+        env.declare(name, symbol, node);
         env.push(new Scope(env.get(), name, symbol));
 
         ASTNode paramNode = (ASTNode) node.slot(4);

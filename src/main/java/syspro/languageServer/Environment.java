@@ -1,5 +1,6 @@
 package syspro.languageServer;
 
+import syspro.languageServer.diagnostics.DefinitionError;
 import syspro.languageServer.exceptions.LanguageServerException;
 import syspro.languageServer.symbols.*;
 import syspro.parser.ast.ASTNode;
@@ -33,7 +34,7 @@ public class Environment {
         for (int i = 0; i < tree.slotCount(); i++) {
             ASTNode node = (ASTNode) tree.slot(i);
             String name = node.slot(1).token().toString();
-            if (definitions.containsKey(name)) throw new LanguageServerException(node, "Type already exists.");
+            if (definitions.containsKey(name)) addInvalidRange(node.span(), new DefinitionError("Type already exists."));
             TypeSymbol symbol = new TypeSymbol(name, node);
 
             ASTNode params = (ASTNode) node.slot(3);
@@ -45,7 +46,7 @@ public class Environment {
             symbol.typeArguments = symbolArgs;
             node.updateSymbol(symbol);
             define(name, node);
-            declare(name, symbol);
+            declare(name, symbol, node);
         }
     }
 
@@ -74,7 +75,7 @@ public class Environment {
     }
 
     public void push(Scope scope) {
-        if (Objects.isNull(scope)) throw new IllegalArgumentException("Scope cannot be null");
+        if (Objects.isNull(scope)) throw new LanguageServerException("Scope cannot be null");
         scopes.push(scope);
     }
 
@@ -107,17 +108,13 @@ public class Environment {
         return get().getSymbol().kind().equals(SymbolKind.FUNCTION);
     }
 
-    public void declare(String name, SemanticSymbol semanticSymbol) {
+    public void declare(String name, SemanticSymbol semanticSymbol, ASTNode node) {
         switch (semanticSymbol) {
             case TypeSymbol symbol -> get().declareSymbol(name, symbol);
             case VariableSymbol symbol -> get().declareSymbol(name, symbol);
             case FunctionSymbol symbol -> get().declareSymbol(name, symbol);
             case TypeParameterSymbol symbol -> get().declareSymbol(name, symbol);
-            default -> {
-                ASTNode node = new ASTNode(null, null);
-                node.updateSymbol(semanticSymbol);
-                throw new LanguageServerException(node, "Unsupported symbol type for declaration: " + semanticSymbol);
-            }
+            default -> addInvalidRange(node.span(), new DefinitionError("Unsupported symbol type for declaration: " + semanticSymbol));
         }
     }
 
@@ -131,7 +128,6 @@ public class Environment {
     }
 
     public void addInvalidRange(TextSpan textSpan, ErrorCode error) {
-
 
         invalidRanges.add(textSpan);
         diagnostics.add(new Diagnostic(
